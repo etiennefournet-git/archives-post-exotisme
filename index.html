@@ -339,6 +339,43 @@ body.modal-open{
   color:var(--muted);
 }
 
+
+.collection-summary{margin:8px 0 18px;color:var(--muted);font-size:14px}
+#editorModeToggle{margin-left:auto;cursor:pointer}
+body.editor.edit-mode #editorModeToggle{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* --- Home redesign --- */
+.hero{max-width:1100px;padding:58px 0 42px}
+.hero .kicker{margin-bottom:16px;letter-spacing:.16em}
+.hero h1{font-size:clamp(54px,6.6vw,104px);line-height:.91;letter-spacing:-.045em;max-width:none;margin:0 0 34px;white-space:nowrap}
+.hero .lead{max-width:820px;font-size:20px;line-height:1.55;margin-bottom:42px}
+.hero .grid{margin-top:18px;gap:16px}
+.hero .card{min-height:150px;padding:24px 26px;transition:transform .18s ease,border-color .18s ease}
+.hero .card:hover{transform:translateY(-2px);border-color:#aaa}
+.hero .card h3{font-size:40px;line-height:1;margin:16px 0 8px}
+.hero .card p{margin:0;color:var(--muted);line-height:1.45}
+
+/* Private notebook: never visible in public mode */
+.editor-private{display:none!important}
+body.editor .editor-private{display:block!important}
+body.editor .hero .editor-private{margin:6px 0 34px}
+body.editor .forum-card{background:#ebe7dc;border:1px solid var(--line);box-shadow:none}
+body.editor .forum-head{padding-bottom:10px}
+
+/* A quiet divider before the statistics */
+.hero .grid{border-top:1px solid var(--line);padding-top:18px}
+
+/* Cleaner public-facing sidebar */
+.sidebar{padding-top:42px}
+.brand{margin-bottom:52px}
+nav .navgroup{margin-top:30px;margin-bottom:10px}
+nav button{transition:color .15s ease,transform .15s ease}
+nav button:hover{transform:translateX(2px)}
+
+/* Responsive: let the title wrap only when the viewport truly requires it */
+@media (max-width:1100px){
+ .hero h1{white-space:normal;max-width:900px}
+}
 </style>
 </head>
 <body>
@@ -358,15 +395,15 @@ body.modal-open{
   <div class="login"><button id="loginBtn">Connexion rédacteur</button><button id="logoutBtn" style="display:none">Déconnexion</button></div>
 </aside>
 <main>
-<div class="adminbar"><span id="editorName">Mode rédacteur</span><span>Lecture publique · édition restreinte</span></div>
+<div class="adminbar"><span id="editorName">Mode rédacteur</span><span>Lecture publique · édition restreinte</span><button id="editorModeToggle" class="secondary" onclick="setEditMode(!editMode)">Mode rédaction : OFF</button></div>
 <div class="wrap">
 
 <section id="accueil" class="section active">
   <div class="hero">
     <div class="kicker" data-content="home_kicker">Archives · post-exotisme</div>
-    <h1 data-content="home_title">Constituer une bibliothèque.<br>Lire ses traces.</h1>
-    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.</p>
-    <div class="forum-card">
+    <h1 data-content="home_title">Archives du post-exotisme</h1>
+    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : bibliographie, collection, archives et index des lectures.</p>
+    <div class="forum-card editor-private">
       <div class="forum-head">
         <div>
           <div class="meta">Carnet de bord</div>
@@ -401,7 +438,7 @@ body.modal-open{
       <option value="a_rechercher">Recherche</option>
     </select>
   </div>
-  <div id="constitutionList" class="list"></div>
+  <div id="constitutionSummary" class="collection-summary"></div><div id="constitutionList" class="list"></div>
 </section>
 
 <section id="ouvrages" class="section">
@@ -642,6 +679,7 @@ const sb = (SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('RE
 let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[], documents=[], relations=[];
 let forumMessages=[];
 let workNotes=[];
+let editMode=false;
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
@@ -956,6 +994,15 @@ function renderWorks(){
  }).join('') || '<div class="empty">Aucun ouvrage ne correspond aux critères.</div>';
 }
 
+function setEditMode(on){
+ editMode=!!on;
+ document.body.classList.toggle('edit-mode',editMode);
+ const b=$('#editorModeToggle');
+ if(b){
+   b.textContent=editMode?'Mode rédaction : ON':'Mode rédaction : OFF';
+   b.classList.toggle('active',editMode);
+ }
+}
 function renderWorkNotes(workId){
  if(!editor || !sb)return '';
 
@@ -1114,6 +1161,12 @@ function renderConstitution(){
    return !filter || status===filter;
  });
 
+ const summary=$('#constitutionSummary');
+ if(summary){
+   const total=works.length;
+   const acquired=acquiredWorkIds.size;
+   summary.textContent=`${acquired} acquis · ${Math.max(0,total-acquired)} à rechercher · ${total} ouvrages`;
+ }
  $('#constitutionList').innerHTML=rows.map(({w,e,hasCopy})=>{
    const finalStatus=hasCopy?'acquis':(e?.constitution_status||'a_rechercher');
 
@@ -2083,7 +2136,7 @@ $('#doLogin').onclick=async()=>{
  if(error){$('#loginError').style.display='block';$('#loginError').textContent=error.message;return;}
  $('#loginError').style.display='none';$('#loginModal').classList.remove('show');await checkEditor();
 };
-$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();window.currentUserId=null;editor=false;workNotes=[];workNoteAuthorNames={};document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';renderAll();await loadForum();};
+$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();window.currentUserId=null;editor=false;editMode=false;workNotes=[];workNoteAuthorNames={};document.body.classList.remove('editor','edit-mode');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';renderAll();await loadForum();};
 
 async function checkEditor(){
  if(!sb)return;
