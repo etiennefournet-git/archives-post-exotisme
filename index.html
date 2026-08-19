@@ -79,6 +79,9 @@ input[type=search]{min-width:280px}
 .forum-compose{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:16px}
 .forum-compose textarea{min-height:70px;resize:vertical}
 .forum-private{font-size:14px;color:var(--muted)}
+.forum-delete{border:0;background:none;color:var(--muted);font:inherit;font-size:11px;margin-left:10px;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.forum-delete:hover{color:var(--text)}
+
 @media(max-width:760px){.forum-compose{grid-template-columns:1fr}.forum-compose button{width:100%}}
 
 .private{border-left-color:#625773}
@@ -1890,9 +1893,32 @@ async function loadForum(){
  const nameById=Object.fromEntries(profiles.map(p=>[p.user_id,p.display_name||'Rédacteur']));
 
  messagesEl.innerHTML=forumMessages.length
-   ? forumMessages.map(m=>`<article class="forum-message"><div class="forum-meta">${esc(nameById[m.author_id]||'Rédacteur')} · ${esc(formatForumDate(m.created_at))}</div><div class="forum-body">${esc(m.body)}</div></article>`).join('')
+   ? forumMessages.map(m=>`<article class="forum-message" data-message-id="${esc(m.id)}">
+        <div class="forum-meta">${esc(nameById[m.author_id]||'Rédacteur')} · ${esc(formatForumDate(m.created_at))}
+          <button class="forum-delete" type="button" data-forum-delete="${esc(m.id)}">Supprimer</button>
+        </div>
+        <div class="forum-body">${esc(m.body)}</div>
+      </article>`).join('')
    : '<div class="empty">Aucune note pour le moment. Écrivez la première.</div>';
+
+ messagesEl.querySelectorAll('[data-forum-delete]').forEach(btn=>{
+   btn.addEventListener('click',()=>deleteForumMessage(btn.dataset.forumDelete));
+ });
 }
+async function deleteForumMessage(id){
+ if(!sb || !editor || !id)return;
+ if(!confirm('Supprimer cette note ?'))return;
+
+ const {error}=await sb.from('forum_messages').delete().eq('id',id);
+ if(error){
+   const err=$('#forumError');
+   err.textContent=error.message;
+   err.style.display='block';
+   return;
+ }
+ await loadForum();
+}
+
 async function sendForumMessage(){
  const input=$('#forumInput'), err=$('#forumError');
  if(!sb || !editor || !input)return;
