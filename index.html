@@ -397,6 +397,116 @@ body.editor .chat-window.open{display:flex}
 #chatInput{flex:1;border:0;padding:13px 12px;resize:none;min-height:44px;max-height:110px;background:transparent;font:inherit;outline:none}
 #chatSend{border:0;border-left:1px solid var(--line);background:transparent;padding:0 15px;cursor:pointer}
 @media(max-width:600px){.chat-window{right:16px;bottom:70px;width:calc(100vw - 32px);height:55vh}.chat-launcher{right:16px;bottom:16px}}
+
+/* --- Carnet de bord: modern editorial thread --- */
+.forum-card{
+  margin:38px 0 58px;
+  padding:0;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(30,28,24,.055);
+  position:relative;
+}
+.forum-card:before{display:none}
+.forum-head{
+  padding:18px 22px 16px;
+  margin:0;
+  border-bottom:1px solid var(--line);
+  align-items:center;
+  background:linear-gradient(to bottom,rgba(0,0,0,.018),transparent);
+}
+.forum-head .meta{
+  font-size:10px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.forum-head h3{
+  font-size:18px;
+  letter-spacing:-.01em;
+}
+.forum-private{
+  font-size:11px;
+  padding:5px 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.forum-messages{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin:0;
+  padding:20px 22px;
+  max-height:330px;
+  overflow:auto;
+}
+.forum-message{
+  position:relative;
+  padding:0 0 0 13px;
+  background:transparent;
+  border:0;
+  border-left:2px solid var(--line);
+  box-shadow:none;
+}
+.forum-message .forum-meta{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font:inherit;
+  font-size:11px;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--muted);
+  margin:0 0 4px;
+}
+.forum-message .forum-body{
+  font-size:14px;
+  line-height:1.55;
+}
+.forum-delete{
+  margin-left:auto;
+  opacity:0;
+  transition:opacity .15s;
+}
+.forum-message:hover .forum-delete{opacity:1}
+.forum-compose{
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+  margin:0;
+  padding:14px 16px 16px;
+  border-top:1px solid var(--line);
+  background:rgba(0,0,0,.018);
+}
+.forum-compose textarea{
+  min-height:44px;
+  max-height:120px;
+  resize:vertical;
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:11px 12px;
+  background:var(--paper);
+  font:inherit;
+}
+.forum-compose .primary{
+  min-height:44px;
+  border-radius:9px;
+}
+.forum-card .empty{
+  padding:22px 0;
+  font-size:13px;
+}
+@media(max-width:600px){
+  .forum-head{padding:16px}
+  .forum-messages{padding:18px 16px}
+  .forum-compose{padding:12px}
+  .forum-private{display:none}
+}
 </style>
 </head>
 <body>
@@ -427,8 +537,8 @@ body.editor .chat-window.open{display:flex}
     <div class="forum-card editor-private">
       <div class="forum-head">
         <div>
-          <div class="meta">Carnet de bord</div>
-          <h3>Notes entre rédacteurs</h3>
+          <div class="meta">Espace rédacteurs</div>
+          <h3>Carnet de bord</h3>
         </div>
         <div class="forum-private" id="forumStatus">Espace privé</div>
       </div>
@@ -436,7 +546,7 @@ body.editor .chat-window.open{display:flex}
         <div class="empty">Connectez-vous comme rédacteur pour voir les notes.</div>
       </div>
       <div id="forumComposer" class="forum-compose">
-        <textarea id="forumInput" placeholder="Écrire une note à Henri…"></textarea>
+        <textarea id="forumInput" placeholder="Écrire un message…"></textarea>
         <button class="primary" id="forumSend">Publier</button>
       </div>
       <p id="forumError" class="note" style="display:none"></p>
