@@ -507,6 +507,10 @@ body.editor .chat-window.open{display:flex}
   .forum-compose{padding:12px}
   .forum-private{display:none}
 }
+
+.chat-dot.offline{background:var(--muted)!important}
+.chat-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:5px;vertical-align:1px}
+.chat-status-dot.online{background:#6f966d}
 </style>
 </head>
 <body>
@@ -813,6 +817,8 @@ let workNotes=[];
 let editMode=false;
 let chatMessages=[];
 let chatChannel=null;
+let chatPresenceChannel=null;
+let chatOtherOnline=false;
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
@@ -988,7 +994,45 @@ function updateChatTitle(){
  const t=$('#chatTitle'), l=$('#chatLauncherLabel');
  if(t)t.textContent=title;
  if(l)l.textContent=title;
+ updateChatPresenceState();
 }
+
+function updateChatPresenceState(){
+ const other=getOtherChatUser();
+ const title='Chat avec '+other;
+ const launcher=$('#chatLauncherLabel'), titleEl=$('#chatTitle'), status=$('#chatStatus'), dot=$('#chatLauncher .chat-dot');
+ if(launcher)launcher.textContent=title;
+ if(titleEl)titleEl.textContent=title;
+ if(status)status.innerHTML=`<span class="chat-status-dot ${chatOtherOnline?'online':''}"></span>${chatOtherOnline?'En ligne':'Hors ligne'}`;
+ if(dot)dot.classList.toggle('offline',!chatOtherOnline);
+}
+
+async function setupChatPresence(){
+ if(!sb || !editor || !window.currentUserId)return;
+ if(chatPresenceChannel){sb.removeChannel(chatPresenceChannel);chatPresenceChannel=null;}
+ const presenceKey=window.currentUserId;
+ chatPresenceChannel=sb.channel('private-editor-presence',{config:{presence:{key:presenceKey}}});
+ chatPresenceChannel.on('presence',{event:'sync'},()=>{
+   const state=chatPresenceChannel.presenceState();
+   const otherId=getOtherChatUserId();
+   chatOtherOnline=!!(otherId && state[otherId] && state[otherId].length);
+   updateChatPresenceState();
+ }).on('presence',{event:'join'},()=>updateChatPresenceState())
+   .on('presence',{event:'leave'},()=>updateChatPresenceState())
+   .subscribe(async status=>{
+      if(status==='SUBSCRIBED'){
+        await chatPresenceChannel.track({online_at:new Date().toISOString()});
+        updateChatPresenceState();
+      }
+   });
+}
+
+function getOtherChatUserId(){
+ const me=window.currentUserId;
+ const other=(editorProfiles||[]).find(p=>p.user_id!==me);
+ return other?.user_id||null;
+}
+
 function formatChatTime(value){
  const d=new Date(value);
  return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
@@ -1008,7 +1052,7 @@ async function loadChat(){
  if(!sb || !editor || !window.currentUserId)return;
  const result=await sb.from('chat_messages').select('id,author_id,body,created_at').order('created_at',{ascending:true});
  if(result.error){console.warn('Chat non disponible :',result.error.message);$('#chatStatus').textContent='Chat indisponible';chatMessages=[];renderChat();return;}
- chatMessages=result.data||[];$('#chatStatus').textContent='Privé · temps réel';renderChat();
+ chatMessages=result.data||[];renderChat();updateChatPresenceState();setupChatPresence();
  if(chatChannel)sb.removeChannel(chatChannel);
  chatChannel=sb.channel('private-chat-messages').on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},payload=>{
    if(payload.new && !chatMessages.some(m=>m.id===payload.new.id)){chatMessages.push(payload.new);chatMessages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));renderChat();}
@@ -1034,7 +1078,7 @@ function renderAll(error){
  if(error) console.warn(error);
  if(editor && window.currentUserId){loadChat();}else{
    chatMessages=[];
-   if(chatChannel){sb.removeChannel(chatChannel);chatChannel=null;}
+   if(chatChannel){sb.removeChannel(chatChannel);chatChannel=null;}if(chatPresenceChannel){sb.removeChannel(chatPresenceChannel);chatPresenceChannel=null;}chatOtherOnline=false;
    const cw=$('#chatWindow'); if(cw)cw.classList.remove('open');
    renderChat();
  }
