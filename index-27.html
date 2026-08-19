@@ -1,0 +1,1826 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Archives du post-exotisme</title>
+<meta name="description" content="Archives, bibliographie, constitution d'une collection et index du post-exotisme.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f5f3ee; --paper:#fbfaf7; --ink:#20201e; --muted:#77746d;
+  --line:#d9d5cc; --accent:#743c32; --soft:#ebe7df; --dark:#292824;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.55}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.layout{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;padding:42px 28px;border-right:1px solid var(--line);background:var(--paper)}
+.brand{font-size:25px;line-height:1.05;margin-bottom:46px}
+.brand small{display:block;margin-top:9px;font:11px/1.3 Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+nav button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 0;color:#494640;font-size:16px}
+nav button:hover,nav button.active{color:var(--accent)}
+.navgroup{margin:19px 0 7px;font:10px Arial,sans-serif;text-transform:uppercase;letter-spacing:.15em;color:#99958c}
+.login{position:absolute;bottom:25px;left:28px;right:28px}
+.login button{border:1px solid var(--line);background:none;padding:7px 10px;font-size:12px;width:100%}
+main{min-width:0}
+.wrap{max-width:1080px;margin:0 auto;padding:58px 55px 100px}
+.hero{min-height:62vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--line);margin-bottom:70px}
+.kicker{font:11px Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(48px,8vw,88px);line-height:.93;font-weight:400;margin:20px 0 30px;max-width:760px}
+h2{font-size:36px;font-weight:400;line-height:1.1;margin:0 0 28px}
+h3{font-size:22px;font-weight:400;margin:0 0 10px}
+.lead{font-size:21px;max-width:690px;color:#4e4b45}
+.section{display:none}
+.section.active{display:block}
+.sectionhead{border-bottom:1px solid var(--line);padding-bottom:25px;margin-bottom:30px}
+.meta{font:11px Arial,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}
+input,select,textarea{background:var(--paper);border:1px solid var(--line);padding:9px 11px;color:var(--ink)}
+select{min-width:190px;cursor:pointer}
+select option{background:var(--paper);color:var(--ink)}
+input[type=search]{min-width:280px}
+.primary{background:var(--dark);color:#fff;border:1px solid var(--dark);padding:9px 14px}
+.secondary{background:none;border:1px solid var(--line);padding:9px 14px}
+.timeline-link{border:0;background:none;padding:0;text-align:left;color:var(--ink);font-weight:700;font-size:inherit}
+.timeline-link:hover{color:var(--accent);text-decoration:underline}
+.edition-link{margin:8px 0 0}.edition-link a{color:var(--accent);text-decoration:none}.edition-link a:hover{text-decoration:underline}.copy-card{border:1px solid var(--line);padding:14px;margin:10px 0;background:var(--paper)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.card{background:var(--paper);padding:22px}
+.card .year{font:12px Arial,sans-serif;color:var(--accent);margin-bottom:7px}
+.card .author{color:var(--muted);font-size:15px}
+.card .pub{font:13px Arial,sans-serif;color:var(--muted);margin-top:12px}
+.status{display:inline-block;font:10px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;padding:4px 7px;border:1px solid var(--line);margin-top:13px}
+.status.acquis{border-color:#6b8064;color:#4e6947}
+.status.search{color:var(--accent)}
+.status.future{color:#6d637e}
+.list{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:75px 1fr auto;gap:18px;padding:18px 5px;border-bottom:1px solid var(--line);align-items:start}
+.row .date{font:12px Arial,sans-serif;color:var(--muted)}
+.row .right{text-align:right;font:11px Arial,sans-serif;color:var(--muted)}
+.tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.tabs button{border:0;background:none;padding:10px 0;color:var(--muted)}
+.tabs button.active{color:var(--accent);border-bottom:2px solid var(--accent)}
+.empty{padding:40px 0;color:var(--muted);font-style:italic}
+.detail{background:var(--paper);border:1px solid var(--line);padding:28px;margin-top:20px}
+.back{border:0;background:none;color:var(--accent);padding:0;margin-bottom:18px}
+.note{border-left:3px solid var(--accent);padding:12px 16px;background:var(--soft);font-size:14px;margin:10px 0}
+.private{border-left-color:#625773}
+.modal{
+ position:fixed;
+ inset:0;
+ background:rgba(20,19,17,.42);
+ display:none;
+ align-items:center;
+ justify-content:center;
+ padding:20px;
+ z-index:20;
+ overflow-y:auto;
+ overscroll-behavior:contain;
+}
+.modal.show{display:flex}
+.dialog{
+ background:var(--paper);
+ width:min(500px,100%);
+ max-height:calc(100vh - 40px);
+ overflow-y:auto;
+ overscroll-behavior:contain;
+ box-sizing:border-box;
+ padding:30px;
+}
+.dialog h3{margin-bottom:20px}
+.formrow{display:grid;gap:7px;margin:12px 0}
+.formrow label{font:11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.close{float:right;border:0;background:none;font-size:22px}
+.adminbar{display:none;background:#ece8df;padding:8px 12px;font:11px Arial,sans-serif;justify-content:space-between;align-items:center}
+body.editor .adminbar{display:flex}
+body.editor .editor-only{display:block}
+.editor-only{display:none}
+@media(max-width:760px){
+ .layout{display:block}.sidebar{position:relative;height:auto;padding:25px 20px;border-right:0;border-bottom:1px solid var(--line)}
+ .brand{margin-bottom:20px}.login{position:static;margin-top:18px}
+ nav{display:flex;gap:13px;overflow:auto}nav button{white-space:nowrap;width:auto}.navgroup{display:none}
+ .wrap{padding:38px 22px 70px}.hero{min-height:55vh}h1{font-size:52px}.row{grid-template-columns:55px 1fr}.row .right{display:none}
+ input[type=search]{min-width:0;width:100%}
+}
+
+.index-work-link,.index-entry-link{
+  display:inline-block;
+  padding:8px 14px;
+  border:1px solid var(--line,#d8d2c8);
+  border-radius:10px;
+  background:var(--paper,#f5f2ec);
+  color:var(--ink,#222);
+  font:inherit;
+  cursor:pointer;
+}
+.index-work-link:hover,.index-entry-link:hover{
+  border-color:var(--accent,#555);
+}
+.index-add{
+  display:inline-block;
+  margin-top:10px;
+  padding:8px 14px;
+  border:1px solid var(--accent,#555);
+  border-radius:10px;
+  background:transparent;
+  color:var(--accent,#333);
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+}
+.index-add:hover{
+  background:var(--accent,#333);
+  color:#fff;
+}
+.index-remove{
+  padding:4px 7px;
+  border:0;
+  background:transparent;
+  color:#9a3d3d;
+  font:inherit;
+  font-size:.9em;
+  cursor:pointer;
+}
+.index-remove:hover{
+  text-decoration:underline;
+}
+
+.index-card-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.index-edit{
+  padding:8px 14px;
+  border:1px solid var(--line,#d8d2c8);
+  border-radius:10px;
+  background:var(--paper,#f5f2ec);
+  color:var(--ink,#222);
+  font:inherit;
+  cursor:pointer;
+}
+.index-edit:hover{
+  border-color:var(--accent,#555);
+}
+.index-delete{
+  padding:8px 12px;
+  border:0;
+  background:transparent;
+  color:#9a3d3d;
+  font:inherit;
+  cursor:pointer;
+}
+.index-delete:hover{
+  text-decoration:underline;
+}
+
+.index-card-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+}
+.index-edit-compact{
+  flex:0 0 auto;
+  margin-top:3px;
+  padding:2px 0;
+  border:0;
+  background:transparent;
+  color:var(--muted,#777);
+  font:inherit;
+  font-size:.78em;
+  font-weight:400;
+  cursor:pointer;
+}
+.index-edit-compact:hover{
+  color:var(--ink,#222);
+  text-decoration:underline;
+}
+
+.index-heading-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex:0 0 auto;
+  margin-top:3px;
+}
+.index-delete-compact{
+  padding:2px 0;
+  border:0;
+  background:transparent;
+  color:#9a3d3d;
+  font:inherit;
+  font-size:.78em;
+  font-weight:400;
+  cursor:pointer;
+}
+.index-delete-compact:hover{
+  text-decoration:underline;
+}
+
+.index-notice{
+  margin-top:18px;
+  font-family:inherit;
+  font-size:1.05rem;
+  line-height:1.45;
+  color:var(--muted,#777);
+}
+
+
+
+.work-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.work-subtitle{font-size:1.05rem;color:var(--muted,#777);margin-top:-6px;margin-bottom:10px}
+.work-edit-button,.edition-edit-button{border:1px solid var(--line,#d8d2c8);background:transparent;color:var(--muted,#777);border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+.work-edit-button:hover,.edition-edit-button:hover{color:var(--ink,#222);border-color:var(--ink,#222)}
+.edition-add-button{margin-top:16px;border:1px solid var(--accent,#555);background:transparent;color:var(--accent,#333);border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer}
+.edition-add-button:hover{background:var(--accent,#333);color:#fff}
+.checkrow{display:flex;gap:8px;align-items:center;margin:10px 0}
+.dialog h4{margin:22px 0 10px}
+
+.edition-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.edition-collection-button{
+  border:1px solid var(--accent,#555);
+  background:transparent;
+  color:var(--accent,#333);
+  border-radius:8px;
+  padding:6px 10px;
+  font:inherit;
+  cursor:pointer;
+}
+.edition-collection-button:hover{
+  background:var(--accent,#333);
+  color:#fff;
+}
+.edition-collection-button.in-collection{
+  border-color:#a33f38;
+  color:#a33f38;
+}
+.edition-collection-button.in-collection:hover{
+  background:#a33f38;
+  color:#fff;
+}
+
+body.modal-open{
+  overflow:hidden;
+}
+
+.entity-link{border:0;padding:0;margin:0;background:none;font:inherit;cursor:pointer;text-align:left}
+.author-link,.publisher-link{color:inherit;text-decoration:underline;text-decoration-color:#b9b2a8;text-underline-offset:3px}
+.author-link:hover,.publisher-link:hover,.work-link:hover{text-decoration-color:currentColor}
+.work-link{font-weight:600}
+.author-work-row .right{white-space:nowrap}
+
+.admin-panel{border-top:1px solid var(--line,#ddd);padding-top:20px}
+.data-checks{display:grid;gap:10px}
+.check-ok{padding:12px 14px;border:1px solid #9a9;border-radius:8px}
+.check-item{padding:12px 14px;border:1px solid #ccc;border-radius:8px}
+.check-item.error{border-left:4px solid #a33f38}
+.check-item.warning{border-left:4px solid #b58a32}
+.check-item div{margin-top:5px;color:var(--muted,#777);font-size:.92rem}
+
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap}
+.admin-author-list{margin-top:14px;display:grid;gap:6px}
+.admin-author-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line,#ddd)}
+.author-checklist{display:grid;gap:7px;max-height:180px;overflow:auto;border:1px solid var(--line,#ddd);padding:10px;border-radius:8px}
+.author-check{display:flex;gap:8px;align-items:center}
+
+.copy-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.archive-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+#presentationFields .formrow{margin-bottom:16px}
+#presentationFields textarea{width:100%;min-height:90px;resize:vertical}
+
+.section-count{font-size:.72em;font-weight:500;color:var(--muted);margin-left:.45rem;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <div class="brand">Archives du<br>post-exotisme<small data-content="brand_subtitle">bibliographie · collection · lectures</small></div>
+  <nav>
+    <button class="active" data-section="accueil">Accueil</button>
+    <div class="navgroup">Collection</div>
+    <button data-section="constitution">État de la collection</button>
+    <button data-section="ouvrages">Ouvrages</button>
+    <button data-section="chronologie">Chronologie</button>
+    <div class="navgroup">Index & archives</div>
+    <button data-section="index">Index</button>
+    <button data-section="archives">Archives</button>
+    <button data-section="apropos">À propos</button>
+  </nav>
+  <div class="login"><button id="loginBtn">Connexion rédacteur</button><button id="logoutBtn" style="display:none">Déconnexion</button></div>
+</aside>
+<main>
+<div class="adminbar"><span id="editorName">Mode rédacteur</span><span>Lecture publique · édition restreinte</span></div>
+<div class="wrap">
+
+<section id="accueil" class="section active">
+  <div class="hero">
+    <div class="kicker" data-content="home_kicker">Archives · post-exotisme</div>
+    <h1 data-content="home_title">Constituer une bibliothèque.<br>Lire ses traces.</h1>
+    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, chronologie, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.</p>
+  </div>
+  <div class="grid">
+    <div class="card"><div class="meta">État de la collection</div><h3 id="homeConstitution">—</h3><p>ouvrages acquis dans la collection.</p></div>
+    <div class="card"><div class="meta">Bibliographie</div><h3 id="homeWorks">—</h3><p>ouvrages recensés.</p></div>
+    <div class="card"><div class="meta">Index</div><h3 id="homeIndex">—</h3><p>entrées d'index constituées par les lectures.</p></div>
+  </div>
+</section>
+
+<section id="constitution" class="section">
+  <div class="sectionhead"><div class="kicker">Collection physique</div><h2>État de la collection <span id="constitutionCount" class="section-count">—</span></h2><p>Suivi des exemplaires recherchés, réservés et acquis. L'exemplaire effectivement possédé est documenté séparément de la bibliographie.</p></div>
+  <div class="toolbar">
+    <input id="constitutionSearch" type="search" placeholder="Rechercher un ouvrage…">
+    <select id="constitutionFilter" aria-label="Filtrer l’état de la collection">
+      <option value="">Tous les états</option>
+      <option value="acquis">Acquis</option>
+      <option value="a_rechercher">Recherche</option>
+    </select>
+  </div>
+  <div id="constitutionList" class="list"></div>
+</section>
+
+<section id="ouvrages" class="section">
+  <div class="sectionhead"><div class="kicker">Bibliographie</div><h2>Ouvrages</h2><p>La bibliographie distingue l'œuvre, ses éditions et l'exemplaire effectivement acquis.</p></div>
+  <div class="toolbar">
+    <input id="worksSearch" type="search" placeholder="Titre ou auteur…">
+    <select id="authorFilter"><option value="">Tous les auteurs</option></select>
+    <select id="publisherFilter"><option value="">Tous les éditeurs</option></select>
+  </div>
+  <div id="worksGrid" class="grid"></div>
+  <div id="workDetail"></div>
+</section>
+
+<section id="chronologie" class="section">
+  <div class="sectionhead"><div class="kicker">Premières publications</div><h2>Chronologie</h2><p>Une chronologie générale du corpus et des documents associés.</p></div>
+  <div id="timeline" class="list"></div>
+</section>
+
+<section id="index" class="section">
+  <div class="sectionhead"><div class="kicker">Index croisé</div><h2>Index</h2><p>Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.</p></div>
+  <div class="tabs">
+    <button class="active" data-index="lieu">Lieux</button>
+    <button data-index="personnage">Personnages</button>
+    <button data-index="thematique">Thématiques</button>
+  </div>
+  <div class="editor-only" style="margin:-12px 0 22px"><button class="primary" id="addIndexBtn">+ Ajouter une entrée</button></div>
+  <div id="indexList" class="grid"></div>
+</section>
+
+<section id="archives" class="section">
+  <div class="sectionhead"><div class="kicker">Documents</div><h2>Archives</h2><p>Entretiens, articles, recensions, textes critiques, documents éditoriaux et autres ressources liés au corpus.</p></div>
+  <div class="toolbar">
+    <input id="archiveSearch" type="search" placeholder="Rechercher dans les archives…">
+    <button class="secondary editor-only" id="addArchiveBtn">+ Ajouter un document</button>
+  </div>
+  <div id="archiveList" class="grid"></div>
+</section>
+
+<section id="apropos" class="section">
+  <div class="sectionhead"><div class="kicker" data-content="about_kicker">Le projet</div><h2 data-content="about_title">À propos</h2></div>
+  <div class="detail">
+    <p data-content="about_p1"><strong>Archives du post-exotisme</strong> est un projet de constitution d'une collection physique et d'une archive de lecture.</p>
+    <p data-content="about_p2">Le principe est simple : acquérir les ouvrages, documenter les éditions, lire les livres et construire progressivement un index transversal des lieux, personnages et thématiques.</p>
+    <p data-content="about_p3">La bibliographie peut recenser plusieurs éditions d'une même œuvre à titre documentaire. La Constitution, elle, concerne l'exemplaire effectivement recherché ou acquis.</p>
+    <p data-content="about_p4">Les rédacteurs disposent en outre d'un espace de <strong>notes internes</strong>, invisible au public, destiné aux échanges pratiques : pistes d'achat, demandes de renseignements, contacts, disponibilité d'un ouvrage, etc.</p>
+    <div class="editor-only admin-panel" style="margin-top:28px">
+      <div class="kicker">Administration</div>
+      <h3>Contrôle de la base</h3>
+      <div class="admin-actions">
+        <button class="secondary" id="runDataChecks">Vérifier la cohérence des données</button>
+        <button class="secondary" id="addAuthorAdmin">+ Ajouter un auteur</button>
+        <button class="secondary" id="addWorkAdmin">+ Ajouter un ouvrage</button>
+        <button class="secondary" id="editPresentationBtn">Modifier les textes de présentation</button>
+      </div>
+      <div id="authorAdminList" class="admin-author-list"></div>
+      <div id="dataChecks" class="data-checks" style="margin-top:16px"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+</main>
+</div>
+
+<div id="indexEntryModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeIndexEntry">×</button>
+  <h3>Ajouter une entrée d’Index</h3>
+  <div class="formrow"><label>Type</label>
+   <select id="indexEntryType">
+    <option value="lieu">Lieu</option>
+    <option value="personnage">Personnage</option>
+    <option value="thematique">Thématique</option>
+   </select>
+  </div>
+  <div class="formrow"><label>Nom</label><input id="indexEntryName" type="text"></div>
+  <div class="formrow"><label>Notice <span class="meta">(facultatif)</span></label><textarea id="indexEntryNotice" rows="5"></textarea></div>
+  <button class="primary" id="saveIndexEntry">Enregistrer</button>
+  <p id="indexEntryError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="editIndexModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeEditIndex">×</button>
+  <h3>Modifier l’entrée d’Index</h3>
+  <div class="formrow"><label>Type</label>
+   <select id="editIndexType">
+    <option value="lieu">Lieu</option>
+    <option value="personnage">Personnage</option>
+    <option value="thematique">Thématique</option>
+   </select>
+  </div>
+  <div class="formrow"><label>Nom</label><input id="editIndexName" type="text"></div>
+  <div class="formrow"><label>Notice <span class="meta">(facultatif)</span></label><textarea id="editIndexNotice" rows="5"></textarea></div>
+  <button class="primary" id="saveEditIndex">Enregistrer les modifications</button>
+  <p id="editIndexError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="workEditModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeWorkEdit">×</button>
+  <h3 id="workEditTitleHeading">Modifier l’ouvrage</h3>
+  <div class="formrow"><label>Titre</label><input id="workEditTitle" type="text"></div>
+  <div class="formrow"><label>Sous-titre</label><input id="workEditSubtitle" type="text"></div>
+  <div class="formrow"><label>Première publication</label><input id="workEditYear" type="number"></div>
+  <div class="formrow"><label>Catégorie</label>
+   <select id="workEditCategory">
+    <option value="post_exotisme">Post-exotisme</option>
+    <option value="sur_le_post_exotisme">Sur le post-exotisme</option>
+    <option value="hors_corpus_av">Hors corpus</option>
+   </select>
+  </div>
+  <div class="formrow"><label>Genre</label><input id="workEditGenre" type="text"></div>
+  <div class="formrow"><label>Auteurs</label><div id="workEditAuthors" class="author-checklist"></div></div>
+  <div class="formrow"><label>Notice</label><textarea id="workEditNotice" rows="5"></textarea></div>
+  <div class="formrow"><label>Image de couverture (URL)</label><input id="workEditCover" type="url"></div>
+  <div class="formrow"><label>Note de vérification</label><textarea id="workEditVerification" rows="4"></textarea></div>
+  <button class="primary" id="saveWorkEdit">Enregistrer</button>
+  <p id="workEditError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="editionEditModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeEditionEdit">×</button>
+  <h3 id="editionEditTitle">Ajouter une édition</h3>
+  <h4>Informations principales</h4>
+  <div class="formrow"><label>Année de publication</label><input id="editionYear" type="number"></div>
+  <div class="formrow"><label>Date de publication</label><input id="editionDate" type="date"></div>
+  <div class="formrow"><label>Éditeur</label><input id="editionPublisher" type="text"></div>
+  <div class="formrow"><label>Collection</label><input id="editionCollection" type="text"></div>
+  <div class="formrow"><label>N° de collection</label><input id="editionCollectionNumber" type="text"></div>
+  <div class="formrow"><label>ISBN</label><input id="editionISBN" type="text"></div>
+  <div class="formrow"><label>Format</label><input id="editionFormat" type="text"></div>
+  <div class="formrow"><label>Pages</label><input id="editionPages" type="number"></div>
+  <h4>Informations complémentaires</h4>
+  <div class="formrow"><label>Langue</label><input id="editionLanguage" type="text"></div>
+  <div class="formrow"><label>Pays</label><input id="editionCountry" type="text"></div>
+  <div class="formrow"><label>Type d’édition</label><input id="editionType" type="text"></div>
+  <label class="checkrow"><input id="editionOriginal" type="checkbox"> Édition originale</label>
+  <label class="checkrow"><input id="editionTarget" type="checkbox"> Édition de référence</label>
+  <h4>Vérification / sources</h4>
+  <div class="formrow"><label>Statut de vérification</label>
+   <select id="editionVerification">
+    <option value="a_verifier">À vérifier</option>
+    <option value="verifie">Vérifié</option>
+    <option value="incertain">Incertain</option>
+   </select>
+  </div>
+  <div class="formrow"><label>Source</label><input id="editionSource" type="text"></div>
+  <div class="formrow"><label>URL source</label><input id="editionSourceUrl" type="url"></div>
+  <div class="formrow"><label>Notes</label><textarea id="editionNotes" rows="4"></textarea></div>
+  <button class="primary" id="saveEditionEdit">Enregistrer</button>
+  <p id="editionEditError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="copyEditModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeCopyEdit">×</button>
+  <h3>Modifier l’exemplaire</h3>
+  <div class="formrow"><label>Date d’acquisition</label><input id="copyAcquiredAt" type="date"></div>
+  <div class="formrow"><label>Provenance <span class="meta">(facultatif)</span></label><input id="copyProvenance" type="text"></div>
+  <div class="formrow"><label>État <span class="meta">(facultatif)</span></label><input id="copyCondition" type="text"></div>
+  <div class="formrow"><label>Notes publiques <span class="meta">(facultatif)</span></label><textarea id="copyPublicNotes" rows="5"></textarea></div>
+  <button class="primary" id="saveCopyEdit">Enregistrer</button>
+  <p id="copyEditError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="authorEditModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeAuthorEdit">×</button>
+  <h3 id="authorEditTitle">Ajouter un auteur</h3>
+  <div class="formrow"><label>Nom</label><input id="authorEditName" type="text"></div>
+  <div class="formrow"><label>Notice biographique <span class="meta">(facultatif)</span></label><textarea id="authorEditBio" rows="6"></textarea></div>
+  <button class="primary" id="saveAuthorEdit">Enregistrer</button>
+  <p id="authorEditError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="occurrenceModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeOccurrence">×</button>
+  <h3 id="occurrenceTitle">Ajouter une relation d’Index</h3>
+  <div class="formrow"><label>Ouvrage</label>
+   <select id="occurrenceWork"></select>
+  </div>
+  <div class="formrow"><label>Page <span class="meta">(facultatif)</span></label><input id="occurrencePage" type="text"></div>
+  <div class="formrow"><label>Chapitre <span class="meta">(facultatif)</span></label><input id="occurrenceChapter" type="text"></div>
+  <div class="formrow"><label>Citation <span class="meta">(facultatif)</span></label><textarea id="occurrenceQuote" rows="3"></textarea></div>
+  <div class="formrow"><label>Note <span class="meta">(facultatif)</span></label><textarea id="occurrenceNote" rows="3"></textarea></div>
+  <button class="primary" id="saveOccurrence">Relier</button>
+  <p id="occurrenceError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="archiveEditModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeArchiveEdit">×</button>
+  <h3 id="archiveEditTitle">Ajouter un document</h3>
+  <div class="formrow"><label>Type de document</label><input id="archiveType" type="text"></div>
+  <div class="formrow"><label>Titre</label><input id="archiveDocTitle" type="text"></div>
+  <div class="formrow"><label>Auteur <span class="meta">(facultatif)</span></label><input id="archiveAuthor" type="text"></div>
+  <div class="formrow"><label>Date <span class="meta">(facultatif)</span></label><input id="archiveDate" type="text"></div>
+  <div class="formrow"><label>Description <span class="meta">(facultatif)</span></label><textarea id="archiveDescription" rows="5"></textarea></div>
+  <div class="formrow"><label>URL <span class="meta">(facultatif)</span></label><input id="archiveUrl" type="url"></div>
+  <button class="primary" id="saveArchiveEdit">Enregistrer</button>
+  <p id="archiveEditError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="presentationModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closePresentation">×</button>
+  <h3>Textes de présentation</h3>
+  <p class="meta">Accueil et page À propos. Les modifications sont enregistrées dans Supabase.</p>
+  <div id="presentationFields"></div>
+  <button class="primary" id="savePresentation">Enregistrer</button>
+  <p id="presentationError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<div id="loginModal" class="modal">
+ <div class="dialog">
+  <button class="close" id="closeLogin">×</button>
+  <h3>Connexion rédacteur</h3>
+  <div class="formrow"><label>Email</label><input id="email" type="email" autocomplete="username"></div>
+  <div class="formrow"><label>Mot de passe</label><input id="password" type="password" autocomplete="current-password"></div>
+  <button class="primary" id="doLogin">Se connecter</button>
+  <p id="loginError" class="note" style="display:none"></p>
+ </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qtgfjzoxybpwzidvxgpf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_aigtp0R-_UemK5IZKWucaA_nYoZDPj0';
+const sb = (SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('REMPLACER'))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[], documents=[], relations=[];
+let editor=false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const defaultPresentation={
+ brand_subtitle:'bibliographie · collection · lectures',
+ home_kicker:'Archives · post-exotisme',
+ home_title:'Constituer une bibliothèque.<br>Lire ses traces.',
+ home_lead:'Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, chronologie, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.',
+ about_kicker:'Le projet',
+ about_title:'À propos',
+ about_p1:"<strong>Archives du post-exotisme</strong> est un projet de constitution d'une collection physique et d'une archive de lecture.",
+ about_p2:"Le principe est simple : acquérir les ouvrages, documenter les éditions, lire les livres et construire progressivement un index transversal des lieux, personnages et thématiques.",
+ about_p3:"La bibliographie peut recenser plusieurs éditions d'une même œuvre à titre documentaire. La Constitution, elle, concerne l'exemplaire effectivement recherché ou acquis.",
+ about_p4:"Les rédacteurs disposent en outre d'un espace de <strong>notes internes</strong>, invisible au public, destiné aux échanges pratiques : pistes d'achat, demandes de renseignements, contacts, disponibilité d'un ouvrage, etc."
+};
+const presentationLabels={
+ brand_subtitle:'Barre latérale — sous-titre',
+ home_kicker:'Accueil — surtitre',home_title:'Accueil — titre',home_lead:'Accueil — introduction',
+ about_kicker:'À propos — surtitre',about_title:'À propos — titre',
+ about_p1:'À propos — paragraphe 1',about_p2:'À propos — paragraphe 2',
+ about_p3:'À propos — paragraphe 3',about_p4:'À propos — paragraphe 4'
+};
+let presentation={};
+
+function applyPresentation(){
+ Object.keys(defaultPresentation).forEach(k=>{
+   const el=document.querySelector(`[data-content="${k}"]`);
+   if(el) el.innerHTML=presentation[k] ?? defaultPresentation[k];
+ });
+}
+
+async function loadPresentation(){
+ if(!sb){applyPresentation();return;}
+ try{
+   const {data,error}=await sb.from('site_contents').select('key,value');
+   if(error) throw error;
+   presentation=Object.fromEntries((data||[]).map(x=>[x.key,x.value]).filter(x=>x.value!==null));
+ }catch(e){
+   // La fonctionnalité est optionnelle : l'absence de table ne bloque pas le site.
+   presentation={};
+   console.warn('Textes de présentation non chargés :',e.message);
+ }
+ applyPresentation();
+}
+
+function openPresentationEditor(){
+ if(!editor)return;
+ $('#presentationFields').innerHTML=Object.keys(defaultPresentation).map(k=>`
+   <div class="formrow">
+     <label>${esc(presentationLabels[k])}</label>
+     <textarea id="presentation_${k}">${esc(presentation[k] ?? defaultPresentation[k])}</textarea>
+   </div>`).join('');
+ $('#presentationError').style.display='none';
+ $('#presentationModal').classList.add('show');
+}
+$('#editPresentationBtn').onclick=openPresentationEditor;
+$('#closePresentation').onclick=()=>$('#presentationModal').classList.remove('show');
+$('#savePresentation').onclick=async()=>{
+ if(!sb){const err=$('#presentationError');err.textContent='Supabase n’est pas disponible.';err.style.display='block';return;}
+ const err=$('#presentationError');err.style.display='none';
+ const rows=Object.keys(defaultPresentation).map(key=>({
+   key,value:document.querySelector(`#presentation_${key}`).value.trim()
+ }));
+ const {error}=await sb.from('site_contents').upsert(rows,{onConflict:'key'});
+ if(error){err.textContent=error.message;err.style.display='block';return;}
+ presentation=Object.fromEntries(rows);
+ applyPresentation();
+ $('#presentationModal').classList.remove('show');
+};
+
+
+async function loadData(){
+ if(!sb){ renderAll(); return; }
+ const q = async (table, query='*') => {
+   const {data,error}=await sb.from(table).select(query);
+   if(error) throw error; return data||[];
+ };
+ try{
+   [works,authors,editions,copies,indexEntries,occurrences,documents,relations] = await Promise.all([
+     q('works','*'),
+     q('authors','*'),
+     q('editions','*'),
+     q('copies','*'),
+     q('index_entries','*'),
+     q('occurrences','*'),
+     q('documents','*'),
+     q('relations','*')
+   ]);
+   await loadWorkAuthors();
+   renderAll();
+ }catch(e){
+   console.error(e);
+   renderAll(e.message);
+ }
+}
+let workAuthors=[];
+async function loadWorkAuthors(){
+ if(!sb)return;
+ const {data,error}=await sb.from('work_authors').select('work_id,author_id,role,author_order');
+ if(!error) workAuthors=data||[];
+}
+function authorNames(workId){
+ return workAuthors.filter(x=>x.work_id===workId).sort((a,b)=>a.author_order-b.author_order).map(x=>authors.find(a=>a.id===x.author_id)?.name).filter(Boolean).join(' · ');
+}
+function pubFor(workId){
+ return editions.filter(e=>e.work_id===workId).sort((a,b)=>(a.publication_year||9999)-(b.publication_year||9999))[0];
+}
+function renderAll(error){
+ if(error) console.warn(error);
+ populateWorkFilters();
+ renderAuthorAdmin();
+ renderWorks(); $('#constitutionFilter')?.addEventListener('change',renderConstitution);
+ renderConstitution(); renderTimeline(); renderIndex(); renderArchives(); updateHome();
+}
+function updateHome(){
+ $('#homeWorks').textContent=works.length||'0';
+
+ // Acquisition = au moins un exemplaire physique rattaché à une édition de l'ouvrage.
+ const acquiredWorkIds=new Set(
+   copies.map(c=>{
+     const edition=editions.find(e=>e.id===c.edition_id);
+     return edition ? edition.work_id : null;
+   }).filter(Boolean)
+ );
+ const acquired=acquiredWorkIds.size;
+ const total=works.length||0;
+ $('#homeConstitution').textContent=`${acquired} / ${total}`;
+ $('#constitutionCount').textContent=`${acquired} / ${total}`;
+
+ $('#homeIndex').textContent=indexEntries.length||'0';
+}
+function statusLabel(s){
+ return {acquis:'Acquis',a_rechercher:'Recherche',reserve:'Réservé',a_paraitre:'À paraître'}[s]||'À définir';
+}
+function statusClass(s){
+ return s==='acquis'?'acquis':s==='a_paraitre'?'future':'search';
+}
+function uniqueSorted(values){
+ return [...new Set(values.map(v=>String(v??'').trim()).filter(Boolean))]
+   .sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));
+}
+
+function populateWorkFilters(){
+ const authorSelect=$('#authorFilter');
+ const publisherSelect=$('#publisherFilter');
+ if(!authorSelect || !publisherSelect)return;
+
+ const currentAuthor=authorSelect.value;
+ const currentPublisher=publisherSelect.value;
+
+ const authorValues=[...authors].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr',{sensitivity:'base'}));
+
+ const publisherValues=uniqueSorted(
+   editions.flatMap(e=>[
+     e.publisher,
+     e.publisher_name,
+     e.editeur,
+     e.editeur_nom
+   ])
+ );
+
+ authorSelect.innerHTML='<option value="">Tous les auteurs</option>';
+ authorValues.forEach(a=>{
+   const option=document.createElement('option');
+   option.value=a.id;
+   option.textContent=a.name;
+   authorSelect.appendChild(option);
+ });
+
+ publisherSelect.innerHTML='';
+ const publisherDefault=document.createElement('option');
+ publisherDefault.value='';
+ publisherDefault.textContent='Tous les éditeurs';
+ publisherSelect.appendChild(publisherDefault);
+ publisherValues.forEach(name=>{
+   const option=document.createElement('option');
+   option.value=name;
+   option.textContent=name;
+   publisherSelect.appendChild(option);
+ });
+
+ if(authorValues.some(a=>a.id===currentAuthor))authorSelect.value=currentAuthor;
+ if(publisherValues.includes(currentPublisher))publisherSelect.value=currentPublisher;
+}
+function authorIdsForWork(workId){
+ return workAuthors.filter(x=>x.work_id===workId)
+   .sort((a,b)=>(a.author_order||0)-(b.author_order||0))
+   .map(x=>x.author_id);
+}
+function authorLinks(workId){
+ return authorIdsForWork(workId).map(id=>{
+   const a=authors.find(x=>x.id===id);
+   return a ? `<button class="entity-link author-link" onclick="showAuthor('${id}')">${esc(a.name)}</button>` : '';
+ }).filter(Boolean).join(' · ') || '';
+}
+function publisherLink(publisher){
+ if(!publisher)return '';
+ const value=JSON.stringify(String(publisher)).replace(/"/g,'&quot;');
+ return `<button class="entity-link publisher-link" onclick="filterByPublisher(${value})">${esc(publisher)}</button>`;
+}
+function filterByAuthor(authorId){
+ const sel=$('#authorFilter');
+ if(sel){ sel.value=authorId; $('#worksSearch').value=''; renderWorks(); }
+ document.getElementById('ouvrages')?.scrollIntoView({behavior:'smooth'});
+}
+function filterByPublisher(publisher){
+ const sel=$('#publisherFilter');
+ if(sel){ sel.value=publisher; $('#worksSearch').value=''; renderWorks(); }
+ document.getElementById('ouvrages')?.scrollIntoView({behavior:'smooth'});
+}
+function showAuthor(authorId){
+ const a=authors.find(x=>x.id===authorId); if(!a)return;
+ const ids=new Set(workAuthors.filter(x=>x.author_id===authorId).map(x=>x.work_id));
+ const ws=works.filter(w=>ids.has(w.id)).sort((a,b)=>String(a.title).localeCompare(String(b.title),'fr',{sensitivity:'base'}));
+ $('#workDetail').innerHTML=`<div class="detail">
+   <button class="back" onclick="$('#workDetail').innerHTML=''">← Fermer</button>
+   <div class="kicker">Auteur</div>
+   <h2>${esc(a.name)}</h2>
+   ${a.bio?`<p>${esc(a.bio)}</p>`:''}
+   <h3>Ouvrages</h3>
+   ${ws.length?`<div class="list">${ws.map(w=>`<div class="row author-work-row">
+     <div><button class="entity-link work-link" onclick="showWork('${w.id}')">${esc(w.title)}</button></div>
+     <div class="right">${w.first_publication_year||'—'}</div>
+   </div>`).join('')}</div>`:'<div class="empty">Aucun ouvrage relié à cet auteur.</div>'}
+ </div>`;
+ document.getElementById('workDetail')?.scrollIntoView({behavior:'smooth'});
+}
+
+function renderWorks(){
+ const term=($('#worksSearch')?.value||'').toLowerCase().trim();
+ const authorTerm=($('#authorFilter')?.value||'').trim();
+ const publisherTerm=($('#publisherFilter')?.value||'').trim();
+
+ const list=works.filter(w=>{
+   const author=authorNames(w.id);
+   const workEditions=editions.filter(e=>e.work_id===w.id);
+   const matchesText=(w.title+' '+author).toLowerCase().includes(term);
+   const matchesAuthor=!authorTerm || author.split(' · ').includes(authorTerm);
+   const matchesPublisher=!publisherTerm || workEditions.some(e=>{
+   return [e.publisher,e.publisher_name,e.editeur,e.editeur_nom]
+     .map(v=>String(v??'').trim())
+     .includes(publisherTerm);
+ });
+   return matchesText && matchesAuthor && matchesPublisher;
+ });
+
+ $('#worksGrid').innerHTML=list.map(w=>{
+   const e=pubFor(w.id);
+   return `<article class="card" data-work="${w.id}">
+     <div class="year">${w.first_publication_year||'—'}</div>
+     <h3>${esc(w.title)}</h3>
+     <div class="author">${authorLinks(w.id)}</div>
+     ${e?`<div class="pub">${publisherLink(e.publisher)}${e.collection?' · '+esc(e.collection):''}</div>`:''}
+     <button class="secondary" style="margin-top:16px" onclick="showWork('${w.id}')">Voir la notice</button>
+   </article>`;
+ }).join('') || '<div class="empty">Aucun ouvrage ne correspond aux critères.</div>';
+}
+function showWork(id){
+ const w=works.find(x=>x.id===id); if(!w)return;
+ const es=editions.filter(e=>e.work_id===id).sort((a,b)=>(a.publication_year||0)-(b.publication_year||0));
+ const copiesForWork=copies.filter(c=>es.some(e=>e.id===c.edition_id));
+ $('#workDetail').innerHTML=`<div class="detail">
+   <button class="back" onclick="$('#workDetail').innerHTML=''">← Fermer</button>
+   <div class="kicker">${w.first_publication_year||''}${authorNames(id)?' · '+authorLinks(id):''}</div>
+   <div class="work-heading">
+     <div>
+       <h2>${esc(w.title)}</h2>
+       ${w.subtitle?`<div class="work-subtitle">${esc(w.subtitle)}</div>`:''}
+     </div>
+     ${editor?`<button class="work-edit-button" onclick="openWorkEditor('${id}')">Modifier</button>`:''}
+   </div>
+   ${w.notice?`<p>${esc(w.notice)}</p>`:''}
+   ${w.verification_note?`<div class="note">${esc(w.verification_note)}</div>`:''}
+   <h3>Index</h3>
+   ${(() => {
+      const rows=occurrences.filter(o=>o.work_id===id);
+      const entries=rows.map(o=>({row:o,entry:indexEntries.find(i=>i.id===o.index_entry_id)})).filter(x=>x.entry);
+      return `${entries.length
+        ? `<div class="index-works">${entries.map(({row,entry})=>`<div class="index-work-row"><button class="index-entry-link" onclick="openIndexEntry('${entry.id}')">${esc(entry.name)}</button>${row.page?` <span class="meta">p. ${esc(row.page)}</span>`:''}${editor?` <button class="index-edit-compact" onclick="openOccurrenceEditor('${row.id}')">Modifier</button>
+          <button class="index-remove" onclick="removeOccurrence('${row.id}')">Retirer</button>`:''}</div>`).join('')}</div>`
+        : '<div class="empty">Aucune entrée d’index pour le moment.</div>'}
+      ${editor?`<div style="margin-top:14px"><button class="index-add" onclick="openIndexPicker('${id}')">+ Ajouter au index</button></div>`:''}`;
+   })()}
+   <h3>Exemplaire dans la collection</h3>
+   ${copiesForWork.length ? copiesForWork.map(c=>`<div class="copy-card">
+     <div><strong>État de la collection : Acquis</strong></div>
+     <div class="meta">${c.acquired_at?'Acquis le '+esc(c.acquired_at):''}${c.provenance?' · '+esc(c.provenance):''}${c.condition?' · État : '+esc(c.condition):''}</div>
+     ${c.public_notes?`<p>${esc(c.public_notes)}</p>`:''}
+     ${editor?`<div class="copy-actions">
+       <button class="index-edit-compact" onclick="openCopyEditor('${c.id}')">Modifier</button>
+       <button class="index-delete-compact" onclick="removeCopy('${c.id}')">Supprimer de la collection</button>
+     </div>`:''}
+   </div>`).join('') : '<div class="empty">Aucun exemplaire enregistré.</div>'}
+   <h3>Éditions recensées</h3>
+   <div class="list">${es.map(e=>`<div class="row">
+      <div class="date">${e.publication_year||'—'}</div>
+      <div>
+        <strong>${esc(e.publisher||'Éditeur non renseigné')}</strong>
+        ${e.collection?`<br><span class="meta">${esc(e.collection)}${e.collection_number?' · n° '+esc(e.collection_number):''}</span>`:''}
+        ${e.edition_type?`<br><span class="meta">${esc(e.edition_type)}</span>`:''}
+        ${e.notes?`<p>${esc(e.notes)}</p>`:''}
+        ${e.source_url?`<p class="edition-link"><a href="${esc(e.source_url)}" target="_blank" rel="noopener noreferrer">Voir la fiche chez l’éditeur ↗</a></p>`:''}
+        ${editor?`<div class="edition-actions">
+          <button class="edition-collection-button ${copies.some(c=>c.edition_id===e.id)?'in-collection':''}"
+                  onclick="toggleCollectionEdition('${e.id}')">
+            ${copies.some(c=>c.edition_id===e.id)?'Supprimer de la collection':'Ajouter à la collection'}
+          </button>
+          <button class="edition-edit-button" onclick="openEditionEditor('${e.id}')">Modifier</button>
+          <button class="index-delete-compact" onclick="deleteEdition('${e.id}')">Supprimer</button>
+        </div>`:''}
+      </div>
+      <div class="right">${e.is_original?'première édition':e.is_target?'exemplaire recherché':''}</div>
+   </div>`).join('')||'<div class="empty">Aucune édition renseignée.</div>'}</div>
+   ${editor?`<button class="edition-add-button" onclick="openEditionEditor(null,'${id}')">+ Ajouter une édition</button>`:''}
+ </div>`;
+ $('#workDetail').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderConstitution(){
+ const term=($('#constitutionSearch')?.value||'').toLowerCase();
+ const filter=$('#constitutionFilter')?.value||'';
+ const rows=works.map(w=>({w,e:pubFor(w.id)})).filter(x=>{
+   const text=(x.w.title+' '+authorNames(x.w.id)).toLowerCase();
+   if(!text.includes(term))return false;
+   const s=x.e?.constitution_status||'a_rechercher';
+   const hasCopy=copies.some(c=>x.e&&c.edition_id===x.e.id);
+   const finalStatus=hasCopy?'acquis':s;
+   return !filter || finalStatus===filter;
+ });
+ $('#constitutionList').innerHTML=rows.map(({w,e})=>{
+   const s=e?.constitution_status||'a_rechercher';
+   const hasCopy=copies.some(c=>e&&c.edition_id===e.id);
+   const finalStatus=hasCopy?'acquis':s;
+   return `<div class="row">
+     <div class="date">${w.first_publication_year||'—'}</div>
+     <div><strong>${esc(w.title)}</strong><br><span class="meta">${esc(authorNames(w.id))}</span>${e?`<br><span class="meta">${esc(e.publisher||'')} ${e.collection?'· '+esc(e.collection):''}</span>`:''}</div>
+     <div class="right"><span class="status ${statusClass(finalStatus)}">${statusLabel(finalStatus)}</span></div>
+   </div>`;
+ }).join('');
+}
+function renderTimeline(){
+ const sorted=[...works].sort((a,b)=>(a.first_publication_year||9999)-(b.first_publication_year||9999)||a.title.localeCompare(b.title,'fr'));
+ $('#timeline').innerHTML=sorted.map(w=>`<div class="row">
+  <div class="date">${w.first_publication_year||'—'}</div>
+  <div>
+    <button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button>
+    <br><span class="meta">${esc(authorNames(w.id))}</span>
+  </div>
+  <div class="right">${w.category==='hors_corpus_av'?'hors corpus':w.category==='sur_le_post_exotisme'?'sur le post-exotisme':''}</div>
+ </div>`).join('');
+}
+
+function openIndexEntry(id){
+ const entry=indexEntries.find(x=>x.id===id);
+ if(!entry)return;
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ $('#index').classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ document.querySelector('nav button[data-section="index"]').classList.add('active');
+ document.querySelectorAll('[data-index]').forEach(x=>x.classList.toggle('active',x.dataset.index===entry.type));
+ renderIndex();
+ document.getElementById('indexList')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function openWorkFromTimeline(id){
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ $('#ouvrages').classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ document.querySelector('nav button[data-section="ouvrages"]').classList.add('active');
+ $('#workDetail').innerHTML='';
+ showWork(id);
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+let indexType='lieu';
+let editingIndexId=null;
+
+function openIndexEditor(id){
+ if(!editor)return;
+ const entry=indexEntries.find(x=>x.id===id);
+ if(!entry)return;
+ editingIndexId=id;
+ $('#editIndexType').value=entry.type||'lieu';
+ $('#editIndexName').value=entry.name||'';
+ $('#editIndexNotice').value=entry.notice||'';
+ $('#editIndexError').style.display='none';
+ $('#editIndexModal').classList.add('show');
+ $('#editIndexName').focus();
+}
+
+$('#closeEditIndex').onclick=()=>$('#editIndexModal').classList.remove('show');
+
+$('#saveEditIndex').onclick=async()=>{
+ if(!editor || !sb || !editingIndexId)return;
+ const type=$('#editIndexType').value;
+ const name=$('#editIndexName').value.trim();
+ const notice=$('#editIndexNotice').value.trim();
+ const err=$('#editIndexError');
+ err.style.display='none';
+
+ if(!name){
+   err.textContent='Le nom est obligatoire.';
+   err.style.display='block';
+   return;
+ }
+
+ const duplicate=indexEntries.some(x=>
+   x.id!==editingIndexId &&
+   x.type===type &&
+   String(x.name||'').trim().localeCompare(name,'fr',{sensitivity:'base'})===0
+ );
+ if(duplicate){
+   err.textContent='Une autre entrée porte déjà ce nom dans cette catégorie.';
+   err.style.display='block';
+   return;
+ }
+
+ const {data,error}=await sb.from('index_entries')
+   .update({type,name,notice:notice||null})
+   .eq('id',editingIndexId)
+   .select('*')
+   .single();
+
+ if(error){
+   err.textContent=error.message;
+   err.style.display='block';
+   return;
+ }
+
+ const pos=indexEntries.findIndex(x=>x.id===editingIndexId);
+ if(pos>=0) indexEntries[pos]=data;
+ $('#editIndexModal').classList.remove('show');
+ renderIndex();
+};
+
+async function deleteIndexEntry(id){
+ if(!editor || !sb)return;
+ const entry=indexEntries.find(x=>x.id===id);
+ if(!entry)return;
+
+ const links=occurrences.filter(o=>o.index_entry_id===id);
+ if(links.length){
+   alert(`Impossible de supprimer « ${entry.name} » : cette entrée est encore reliée à ${links.length} ouvrage${links.length>1?'s':''}. Retire d’abord les relations.`);
+   return;
+ }
+
+ if(!confirm(`Supprimer l’entrée « ${entry.name} » ?`))return;
+
+ const {error}=await sb.from('index_entries').delete().eq('id',id);
+ if(error){
+   alert(error.message);
+   return;
+ }
+
+ indexEntries=indexEntries.filter(x=>x.id!==id);
+ renderIndex();
+ updateHome();
+}
+
+async function runDataChecks(){
+ const box=$('#dataChecks');
+ if(!box)return;
+ box.innerHTML='<div class="note">Vérification en cours…</div>';
+ const issues=[];
+
+ // 1. Editions without a work.
+ const orphanEditions=editions.filter(e=>!works.some(w=>w.id===e.work_id));
+ if(orphanEditions.length) issues.push({
+   level:'error', title:`${orphanEditions.length} édition(s) sans ouvrage`,
+   detail:orphanEditions.map(e=>`${e.publication_year||'—'} · ${e.publisher||'éditeur non renseigné'}`).join(' ; ')
+ });
+
+ // 2. Works without author relation.
+ const workIdsWithAuthors=new Set(workAuthors.map(x=>x.work_id));
+ const worksWithoutAuthors=works.filter(w=>!workIdsWithAuthors.has(w.id));
+ if(worksWithoutAuthors.length) issues.push({
+   level:'warning', title:`${worksWithoutAuthors.length} ouvrage(s) sans auteur relié`,
+   detail:worksWithoutAuthors.map(w=>w.title).join(' ; ')
+ });
+
+ // 3. Editions without publisher.
+ const editionsWithoutPublisher=editions.filter(e=>!String(e.publisher||'').trim());
+ if(editionsWithoutPublisher.length) issues.push({
+   level:'warning', title:`${editionsWithoutPublisher.length} édition(s) sans éditeur`,
+   detail:editionsWithoutPublisher.map(e=>works.find(w=>w.id===e.work_id)?.title||'ouvrage inconnu').join(' ; ')
+ });
+
+ // 4. Duplicate ISBNs (ignoring blanks).
+ const isbnMap=new Map();
+ editions.forEach(e=>{
+   const isbn=String(e.isbn||'').replace(/[-\s]/g,'').trim();
+   if(isbn){ if(!isbnMap.has(isbn))isbnMap.set(isbn,[]); isbnMap.get(isbn).push(e); }
+ });
+ const duplicateIsbns=[...isbnMap.entries()].filter(([,xs])=>xs.length>1);
+ if(duplicateIsbns.length) issues.push({
+   level:'warning', title:`${duplicateIsbns.length} ISBN en doublon`,
+   detail:duplicateIsbns.map(([isbn,xs])=>`${isbn} (${xs.length} éditions)`).join(' ; ')
+ });
+
+ // 5. Copies pointing to missing editions.
+ const orphanCopies=copies.filter(c=>!editions.some(e=>e.id===c.edition_id));
+ if(orphanCopies.length) issues.push({
+   level:'error', title:`${orphanCopies.length} exemplaire(s) sans édition`,
+   detail:orphanCopies.map(c=>c.id).join(' ; ')
+ });
+
+ // 6. Acquisition status mismatch.
+ const acquiredEditionIds=new Set(copies.map(c=>c.edition_id));
+ const acquiredStatusMismatches=editions.filter(e=>
+   e.constitution_status==='acquis' ? !acquiredEditionIds.has(e.id) : acquiredEditionIds.has(e.id)
+ );
+ if(acquiredStatusMismatches.length) issues.push({
+   level:'error', title:`${acquiredStatusMismatches.length} incohérence(s) entre collection et statut`,
+   detail:acquiredStatusMismatches.map(e=>{
+     const w=works.find(x=>x.id===e.work_id);
+     return `${w?.title||'ouvrage'} · ${e.publication_year||'—'}`
+   }).join(' ; ')
+ });
+
+ // 7. Index relations pointing to missing records.
+ const orphanOccurrences=occurrences.filter(o=>!works.some(w=>w.id===o.work_id)||!indexEntries.some(i=>i.id===o.index_entry_id));
+ if(orphanOccurrences.length)issues.push({level:'error',title:`${orphanOccurrences.length} relation(s) d’Index orpheline(s)`,detail:orphanOccurrences.map(o=>o.id).join(' ; ')});
+
+ const relationCounts=new Map();
+ occurrences.forEach(o=>{const k=`${o.work_id}|${o.index_entry_id}`;relationCounts.set(k,(relationCounts.get(k)||0)+1);});
+ const duplicateRelations=[...relationCounts.entries()].filter(([,n])=>n>1);
+ if(duplicateRelations.length)issues.push({level:'warning',title:`${duplicateRelations.length} relation(s) d’Index en doublon`,detail:duplicateRelations.map(([k,n])=>{const [wid,iid]=k.split('|');return `${works.find(w=>w.id===wid)?.title||'ouvrage'} ↔ ${indexEntries.find(i=>i.id===iid)?.name||'entrée'} (${n})`;}).join(' ; ')});
+
+ const usedIndexIds=new Set(occurrences.map(o=>o.index_entry_id));
+ const unusedIndex=indexEntries.filter(i=>!usedIndexIds.has(i.id));
+ if(unusedIndex.length)issues.push({level:'warning',title:`${unusedIndex.length} entrée(s) d’Index sans ouvrage relié`,detail:unusedIndex.map(i=>i.name).join(' ; ')});
+
+ const orphanWorkAuthors=workAuthors.filter(r=>!works.some(w=>w.id===r.work_id)||!authors.some(a=>a.id===r.author_id));
+ if(orphanWorkAuthors.length)issues.push({level:'error',title:`${orphanWorkAuthors.length} relation(s) auteur/ouvrage orpheline(s)`,detail:orphanWorkAuthors.map(r=>r.work_id+' ↔ '+r.author_id).join(' ; ')});
+
+ const waCounts=new Map();
+ workAuthors.forEach(r=>{const k=`${r.work_id}|${r.author_id}`;waCounts.set(k,(waCounts.get(k)||0)+1);});
+ const duplicateWA=[...waCounts.entries()].filter(([,n])=>n>1);
+ if(duplicateWA.length)issues.push({level:'warning',title:`${duplicateWA.length} relation(s) auteur/ouvrage en doublon`,detail:duplicateWA.map(([k,n])=>{const [wid,aid]=k.split('|');return `${works.find(w=>w.id===wid)?.title||'ouvrage'} ↔ ${authors.find(a=>a.id===aid)?.name||'auteur'} (${n})`;}).join(' ; ')});
+
+ // 8. Duplicate acquisition rows for same edition.
+ const copyCounts=new Map();
+ copies.forEach(c=>copyCounts.set(c.edition_id,(copyCounts.get(c.edition_id)||0)+1));
+ const duplicateCopies=[...copyCounts.entries()].filter(([,n])=>n>1);
+ if(duplicateCopies.length) issues.push({
+   level:'warning', title:`${duplicateCopies.length} édition(s) avec plusieurs exemplaires`,
+   detail:duplicateCopies.map(([id,n])=>`${works.find(w=>w.id===editions.find(e=>e.id===id)?.work_id)?.title||'ouvrage'} (${n})`).join(' ; ')
+ });
+
+ if(!issues.length){
+   box.innerHTML='<div class="check-ok">✓ Aucune incohérence détectée dans les contrôles actuels.</div>';
+   return;
+ }
+ box.innerHTML=issues.map(x=>`<div class="check-item ${x.level}">
+   <strong>${x.level==='error'?'Erreur':'Attention'} — ${esc(x.title)}</strong>
+   <div>${esc(x.detail)}</div>
+ </div>`).join('');
+}
+
+function setModalScrollLock(locked){
+ document.body.classList.toggle('modal-open',locked);
+}
+document.querySelectorAll('.modal').forEach(m=>{
+ const observer=new MutationObserver(()=>setModalScrollLock(!!document.querySelector('.modal.show')));
+ observer.observe(m,{attributes:true,attributeFilter:['class']});
+});
+let editingWorkId=null;
+let editingEditionId=null;
+let addingEditionWorkId=null;
+
+async function toggleCollectionEdition(editionId){
+ if(!editor || !sb)return;
+ const edition=editions.find(e=>e.id===editionId);
+ if(!edition)return;
+
+ const existing=copies.find(c=>c.edition_id===editionId);
+
+ // Suppression : retirer l'exemplaire de la collection et repasser
+ // l'édition dans son état de constitution précédent.
+ if(existing){
+   const confirmed=confirm(`Supprimer « ${edition.publisher||'cette édition'}${edition.publication_year?' — '+edition.publication_year:''} » de la collection ?`);
+   if(!confirmed)return;
+
+   const {error:deleteError}=await sb.from('copies')
+     .delete()
+     .eq('id',existing.id);
+
+   if(deleteError){
+     alert(`Impossible de supprimer l'édition de la collection.\n\n${deleteError.message}`);
+     return;
+   }
+
+   const {data:updated,error:updateError}=await sb.from('editions')
+     .update({constitution_status:'a_rechercher'})
+     .eq('id',editionId)
+     .select('*')
+     .single();
+
+   if(updateError){
+     // On ne recrée pas automatiquement la copie : l'utilisateur est
+     // averti pour éviter une incohérence silencieuse.
+     alert(`L'exemplaire a été retiré, mais le statut de constitution n'a pas pu être mis à jour.\n\n${updateError.message}`);
+     return;
+   }
+
+   const copyPos=copies.findIndex(c=>c.id===existing.id);
+   if(copyPos>=0)copies.splice(copyPos,1);
+
+   const editionPos=editions.findIndex(e=>e.id===editionId);
+   if(editionPos>=0)editions[editionPos]=updated;
+
+   renderAll();
+   showWork(updated.work_id);
+   return;
+ }
+
+ // Ajout.
+ const confirmed=confirm(`Ajouter « ${edition.publisher||'cette édition'}${edition.publication_year?' — '+edition.publication_year:''} » à la collection ?`);
+ if(!confirmed)return;
+
+ const {data:copy,error:copyError}=await sb.from('copies')
+   .insert({edition_id:editionId})
+   .select('*')
+   .single();
+
+ if(copyError){
+   alert(`Impossible d'ajouter l'édition à la collection.\n\n${copyError.message}`);
+   return;
+ }
+
+ const {data:updated,error:updateError}=await sb.from('editions')
+   .update({constitution_status:'acquis'})
+   .eq('id',editionId)
+   .select('*')
+   .single();
+
+ if(updateError){
+   await sb.from('copies').delete().eq('id',copy.id);
+   alert(`L'ajout n'a pas pu être finalisé.\n\n${updateError.message}`);
+   return;
+ }
+
+ copies.push(copy);
+ const pos=editions.findIndex(e=>e.id===editionId);
+ if(pos>=0)editions[pos]=updated;
+
+ renderAll();
+ showWork(updated.work_id);
+}
+
+let editingCopyId=null;
+
+function openCopyEditor(id){
+ if(!editor)return;
+ const c=copies.find(x=>x.id===id);if(!c)return;
+ editingCopyId=id;
+ $('#copyAcquiredAt').value=c.acquired_at?String(c.acquired_at).slice(0,10):'';
+ $('#copyProvenance').value=c.provenance||'';
+ $('#copyCondition').value=c.condition||'';
+ $('#copyPublicNotes').value=c.public_notes||'';
+ $('#copyEditError').style.display='none';
+ $('#copyEditModal').classList.add('show');
+}
+$('#closeCopyEdit').onclick=()=>$('#copyEditModal').classList.remove('show');
+
+$('#saveCopyEdit').onclick=async()=>{
+ if(!editor||!sb||!editingCopyId)return;
+ const err=$('#copyEditError');err.style.display='none';
+ const payload={
+   acquired_at:$('#copyAcquiredAt').value||null,
+   provenance:$('#copyProvenance').value.trim()||null,
+   condition:$('#copyCondition').value.trim()||null,
+   public_notes:$('#copyPublicNotes').value.trim()||null
+ };
+ const {data,error}=await sb.from('copies').update(payload).eq('id',editingCopyId).select('*').single();
+ if(error){err.textContent=error.message;err.style.display='block';return;}
+ const pos=copies.findIndex(c=>c.id===editingCopyId);if(pos>=0)copies[pos]=data;
+ const edition=editions.find(e=>e.id===data.edition_id);
+ editingCopyId=null;$('#copyEditModal').classList.remove('show');
+ renderAll();if(edition)showWork(edition.work_id);
+};
+
+async function removeCopy(id){
+ if(!editor||!sb)return;
+ const c=copies.find(x=>x.id===id);if(!c)return;
+ const edition=editions.find(e=>e.id===c.edition_id);if(!edition)return;
+ if(!confirm('Supprimer cet exemplaire de la collection ?'))return;
+ const {error}=await sb.from('copies').delete().eq('id',id);
+ if(error){alert(error.message);return;}
+ const remaining=copies.filter(x=>x.id!==id && x.edition_id===c.edition_id);
+ copies=copies.filter(x=>x.id!==id);
+ if(!remaining.length){
+   const {data:updated,error:updateError}=await sb.from('editions')
+     .update({constitution_status:'a_rechercher'}).eq('id',edition.id).select('*').single();
+   if(updateError){alert(`Exemplaire supprimé, mais le statut n’a pas pu être réinitialisé.\\n\\n${updateError.message}`);}
+   else{
+     const pos=editions.findIndex(e=>e.id===edition.id);if(pos>=0)editions[pos]=updated;
+   }
+ }
+ renderAll();showWork(edition.work_id);
+}
+
+let editingAuthorId=null;
+
+function renderAuthorChecklist(selectedIds=[]){
+ const box=$('#workEditAuthors');if(!box)return;
+ const selected=new Set(selectedIds);
+ const list=[...authors].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr',{sensitivity:'base'}));
+ box.innerHTML=list.length
+   ? list.map(a=>`<label class="author-check"><input type="checkbox" value="${a.id}" ${selected.has(a.id)?'checked':''}><span>${esc(a.name)}</span></label>`).join('')
+   : '<span class="meta">Aucun auteur enregistré.</span>';
+}
+
+async function syncWorkAuthors(workId){
+ const selected=[...document.querySelectorAll('#workEditAuthors input[type="checkbox"]:checked')].map(x=>x.value);
+ const current=workAuthors.filter(x=>x.work_id===workId);
+ const currentIds=new Set(current.map(x=>x.author_id));
+ const toDelete=current.filter(x=>!selected.includes(x.author_id));
+ if(toDelete.length){
+   const {error}=await sb.from('work_authors').delete().eq('work_id',workId).in('author_id',toDelete.map(x=>x.author_id));
+   if(error)throw error;
+ }
+ const toAdd=selected.filter(id=>!currentIds.has(id));
+ if(toAdd.length){
+   const payload=toAdd.map((author_id,i)=>({work_id:workId,author_id,role:'author',author_order:current.length+i}));
+   const {error}=await sb.from('work_authors').insert(payload);
+   if(error)throw error;
+ }
+ await loadWorkAuthors();
+}
+
+function openAuthorEditor(id=null){
+ if(!editor)return;
+ editingAuthorId=id;
+ const a=id?authors.find(x=>x.id===id):null;
+ $('#authorEditTitle').textContent=a?'Modifier l’auteur':'Ajouter un auteur';
+ $('#authorEditName').value=a?.name||'';
+ $('#authorEditBio').value=a?.bio||'';
+ $('#authorEditError').style.display='none';
+ $('#authorEditModal').classList.add('show');
+ $('#authorEditName').focus();
+}
+$('#closeAuthorEdit').onclick=()=>$('#authorEditModal').classList.remove('show');
+
+$('#saveAuthorEdit').onclick=async()=>{
+ if(!editor||!sb)return;
+ const err=$('#authorEditError');err.style.display='none';
+ const name=$('#authorEditName').value.trim();
+ const bio=$('#authorEditBio').value.trim()||null;
+ if(!name){err.textContent='Le nom est obligatoire.';err.style.display='block';return;}
+ if(authors.some(a=>a.id!==editingAuthorId && String(a.name||'').trim().localeCompare(name,'fr',{sensitivity:'base'})===0)){
+   err.textContent='Cet auteur existe déjà.';err.style.display='block';return;
+ }
+ const result=editingAuthorId
+   ? await sb.from('authors').update({name,bio}).eq('id',editingAuthorId).select('*').single()
+   : await sb.from('authors').insert({name,bio}).select('*').single();
+ if(result.error){err.textContent=result.error.message;err.style.display='block';return;}
+ if(editingAuthorId){const pos=authors.findIndex(a=>a.id===editingAuthorId);if(pos>=0)authors[pos]=result.data;}
+ else authors.push(result.data);
+ $('#authorEditModal').classList.remove('show');
+ renderAuthorAdmin();populateWorkFilters();renderAll();
+ if(editingWorkId)renderAuthorChecklist(authorIdsForWork(editingWorkId));
+};
+
+function renderAuthorAdmin(){
+ const box=$('#authorAdminList');if(!box)return;
+ const rows=[...authors].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr',{sensitivity:'base'}));
+ box.innerHTML=rows.map(a=>{
+   const count=workAuthors.filter(x=>x.author_id===a.id).length;
+   return `<div class="admin-author-row"><div><strong>${esc(a.name)}</strong><span class="meta"> · ${count} ouvrage${count===1?'':'s'}</span></div><button class="index-edit-compact" onclick="openAuthorEditor('${a.id}')">Modifier</button></div>`;
+ }).join('')||'<div class="empty">Aucun auteur.</div>';
+}
+
+async function deleteEdition(id){
+ if(!editor||!sb)return;
+ const e=editions.find(x=>x.id===id);if(!e)return;
+ if(copies.some(c=>c.edition_id===id)){
+   alert('Impossible de supprimer cette édition : elle est présente dans la collection. Supprime d’abord l’exemplaire.');
+   return;
+ }
+ const w=works.find(x=>x.id===e.work_id);
+ if(!confirm(`Supprimer cette édition${w?' de « '+w.title+' »':''} ?`))return;
+ const {error}=await sb.from('editions').delete().eq('id',id);
+ if(error){alert(error.message);return;}
+ editions=editions.filter(x=>x.id!==id);
+ renderAll();
+ if(w)showWork(w.id);
+}
+
+function openWorkEditor(id=null){
+ if(!editor)return;
+ editingWorkId=id;
+ const w=id?works.find(x=>x.id===id):null;
+ $('#workEditTitleHeading').textContent=w?'Modifier l’ouvrage':'Ajouter un ouvrage';
+ $('#workEditTitle').value=w?.title||'';
+ $('#workEditSubtitle').value=w?.subtitle||'';
+ $('#workEditYear').value=w?.first_publication_year||'';
+ $('#workEditCategory').value=w?.category||'post_exotisme';
+ $('#workEditGenre').value=w?.genre||'';
+ renderAuthorChecklist(id?authorIdsForWork(id):[]);
+ $('#workEditNotice').value=w?.notice||'';
+ $('#workEditCover').value=w?.cover_image_url||'';
+ $('#workEditVerification').value=w?.verification_note||'';
+ $('#workEditError').style.display='none';
+ $('#workEditModal').classList.add('show');
+ $('#workEditTitle').focus();
+}
+$('#closeWorkEdit').onclick=()=>$('#workEditModal').classList.remove('show');
+
+$('#saveWorkEdit').onclick=async()=>{
+ if(!editor||!sb)return;
+ const err=$('#workEditError');err.style.display='none';
+ const title=$('#workEditTitle').value.trim();
+ if(!title){err.textContent='Le titre est obligatoire.';err.style.display='block';return;}
+ const payload={
+   title,
+   subtitle:$('#workEditSubtitle').value.trim()||null,
+   first_publication_year:$('#workEditYear').value?Number($('#workEditYear').value):null,
+   category:$('#workEditCategory').value,
+   genre:$('#workEditGenre').value.trim()||null,
+   notice:$('#workEditNotice').value.trim()||null,
+   cover_image_url:$('#workEditCover').value.trim()||null,
+   verification_note:$('#workEditVerification').value.trim()||null
+ };
+ const result=editingWorkId
+   ? await sb.from('works').update(payload).eq('id',editingWorkId).select('*').single()
+   : await sb.from('works').insert(payload).select('*').single();
+ if(result.error){err.textContent=result.error.message;err.style.display='block';return;}
+
+ const workId=result.data.id;
+ if(editingWorkId){
+   const pos=works.findIndex(x=>x.id===editingWorkId);if(pos>=0)works[pos]=result.data;
+ }else works.push(result.data);
+
+ try{await syncWorkAuthors(workId);}
+ catch(relError){
+   err.textContent='Ouvrage enregistré, mais les auteurs n’ont pas pu être mis à jour : '+relError.message;
+   err.style.display='block';return;
+ }
+
+ $('#workEditModal').classList.remove('show');
+ renderAuthorAdmin();renderAll();showWork(workId);
+};
+
+
+function openEditionEditor(id=null,workId=null){
+ if(!editor)return;
+ editingEditionId=id;
+ addingEditionWorkId=workId;
+ const e=id?editions.find(x=>x.id===id):null;
+ $('#editionEditTitle').textContent=e?'Modifier l’édition':'Ajouter une édition';
+ $('#editionYear').value=e?.publication_year??'';
+ $('#editionDate').value=e?.publication_date??'';
+ $('#editionPublisher').value=e?.publisher??'';
+ $('#editionCollection').value=e?.collection??'';
+ $('#editionCollectionNumber').value=e?.collection_number??'';
+ $('#editionISBN').value=e?.isbn??'';
+ $('#editionFormat').value=e?.format??'';
+ $('#editionPages').value=e?.pages??'';
+ $('#editionLanguage').value=e?.language??'français';
+ $('#editionCountry').value=e?.country??'France';
+ $('#editionType').value=e?.edition_type??'';
+ $('#editionOriginal').checked=!!e?.is_original;
+ $('#editionTarget').checked=!!e?.is_target;
+ $('#editionVerification').value=e?.verification_status||'a_verifier';
+ $('#editionSource').value=e?.source??'';
+ $('#editionSourceUrl').value=e?.source_url??'';
+ $('#editionNotes').value=e?.notes??'';
+ $('#editionEditError').style.display='none';
+ $('#editionEditModal').classList.add('show');
+}
+
+$('#closeEditionEdit').onclick=()=>$('#editionEditModal').classList.remove('show');
+
+$('#saveEditionEdit').onclick=async()=>{
+ if(!editor||!sb)return;
+ const err=$('#editionEditError'); err.style.display='none';
+ const workId=addingEditionWorkId || (editingEditionId?editions.find(x=>x.id===editingEditionId)?.work_id:null);
+ if(!workId){err.textContent='Ouvrage introuvable.';err.style.display='block';return;}
+ const payload={
+   work_id:workId,
+   publication_year:$('#editionYear').value?Number($('#editionYear').value):null,
+   publication_date:$('#editionDate').value||null,
+   publisher:$('#editionPublisher').value.trim()||null,
+   collection:$('#editionCollection').value.trim()||null,
+   collection_number:$('#editionCollectionNumber').value.trim()||null,
+   isbn:$('#editionISBN').value.trim()||null,
+   format:$('#editionFormat').value.trim()||null,
+   pages:$('#editionPages').value?Number($('#editionPages').value):null,
+   language:$('#editionLanguage').value.trim()||null,
+   country:$('#editionCountry').value.trim()||null,
+   edition_type:$('#editionType').value.trim()||null,
+   is_original:$('#editionOriginal').checked,
+   is_target:$('#editionTarget').checked,
+   verification_status:$('#editionVerification').value,
+   source:$('#editionSource').value.trim()||null,
+   source_url:$('#editionSourceUrl').value.trim()||null,
+   notes:$('#editionNotes').value.trim()||null
+ };
+ const result=editingEditionId
+   ? await sb.from('editions').update(payload).eq('id',editingEditionId).select('*').single()
+   : await sb.from('editions').insert(payload).select('*').single();
+ if(result.error){err.textContent=result.error.message;err.style.display='block';return;}
+ if(editingEditionId){
+   const pos=editions.findIndex(x=>x.id===editingEditionId); if(pos>=0)editions[pos]=result.data;
+ }else editions.push(result.data);
+ const wid=workId;
+ $('#editionEditModal').classList.remove('show');
+ showWork(wid);
+ updateHome();
+};
+
+let occurrenceEntryId=null;
+let occurrenceWorkId=null;
+
+function openOccurrenceModal({entryId=null,workId=null}={}){
+ if(!editor)return;
+ editingOccurrenceId=null;$('#saveOccurrence').textContent='Relier';
+ occurrenceEntryId=entryId;
+ occurrenceWorkId=workId;
+ const select=$('#occurrenceWork');
+ select.dataset.mode='work';
+ select.innerHTML=works
+   .slice()
+   .sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'fr',{sensitivity:'base'}))
+   .map(w=>`<option value="${w.id}">${esc(w.title)}</option>`).join('');
+ if(workId){
+   select.value=workId;
+   select.disabled=true;
+ }else{
+   select.disabled=false;
+ }
+ $('#occurrencePage').value='';
+ $('#occurrenceChapter').value='';
+ $('#occurrenceQuote').value='';
+ $('#occurrenceNote').value='';
+ $('#occurrenceError').style.display='none';
+ $('#occurrenceTitle').textContent=entryId
+   ? `Relier un ouvrage à « ${esc(indexEntries.find(x=>x.id===entryId)?.name||'') } »`
+   : 'Relier l’ouvrage à une entrée d’Index';
+ $('#occurrenceModal').classList.add('show');
+}
+
+$('#closeOccurrence').onclick=()=>$('#occurrenceModal').classList.remove('show');
+
+$('#saveOccurrence').onclick=async()=>{
+ if(!editor||!sb)return;
+ let workId=occurrenceWorkId;
+ let entryId=occurrenceEntryId;
+ if($('#occurrenceWork').dataset.mode==='entry')entryId=$('#occurrenceWork').value;
+ if(!workId)workId=$('#occurrenceWork').value;
+ const err=$('#occurrenceError');err.style.display='none';
+ if(!entryId||!workId){err.textContent='Il faut sélectionner un ouvrage et une entrée d’Index.';err.style.display='block';return;}
+ if(occurrences.some(o=>o.id!==editingOccurrenceId&&o.index_entry_id===entryId&&o.work_id===workId)){
+   err.textContent='Cette relation existe déjà.';err.style.display='block';return;
+ }
+ const payload={index_entry_id:entryId,work_id:workId,page:$('#occurrencePage').value.trim()||null,chapter:$('#occurrenceChapter').value.trim()||null,quote:$('#occurrenceQuote').value.trim()||null,note:$('#occurrenceNote').value.trim()||null};
+ const result=editingOccurrenceId
+   ? await sb.from('occurrences').update(payload).eq('id',editingOccurrenceId).select('*').single()
+   : await sb.from('occurrences').insert(payload).select('*').single();
+ if(result.error){err.textContent=result.error.message;err.style.display='block';return;}
+ if(editingOccurrenceId){const pos=occurrences.findIndex(o=>o.id===editingOccurrenceId);if(pos>=0)occurrences[pos]=result.data;}
+ else occurrences.push(result.data);
+ const wid=workId;editingOccurrenceId=null;$('#saveOccurrence').textContent='Relier';$('#occurrenceModal').classList.remove('show');
+ renderIndex();if(wid)showWork(wid);
+};
+
+let editingOccurrenceId=null;
+
+function openOccurrenceEditor(id){
+ if(!editor)return;
+ const row=occurrences.find(o=>o.id===id);if(!row)return;
+ editingOccurrenceId=id;
+ occurrenceEntryId=row.index_entry_id;
+ occurrenceWorkId=row.work_id;
+ const select=$('#occurrenceWork');
+ select.dataset.mode='entry';
+ select.innerHTML=indexEntries.slice().sort((a,b)=>`${a.type} ${a.name}`.localeCompare(`${b.type} ${b.name}`,'fr',{sensitivity:'base'}))
+   .map(i=>`<option value="${i.id}">${i.type==='lieu'?'Lieu':i.type==='personnage'?'Personnage':'Thématique'} — ${esc(i.name)}</option>`).join('');
+ select.value=row.index_entry_id;
+ select.disabled=false;
+ $('#occurrencePage').value=row.page||'';
+ $('#occurrenceChapter').value=row.chapter||'';
+ $('#occurrenceQuote').value=row.quote||'';
+ $('#occurrenceNote').value=row.note||'';
+ $('#occurrenceTitle').textContent='Modifier la relation d’Index';
+ $('#saveOccurrence').textContent='Enregistrer';
+ $('#occurrenceError').style.display='none';
+ $('#occurrenceModal').classList.add('show');
+}
+
+function openIndexPicker(workId){
+ if(!editor)return;
+ editingOccurrenceId=null;$('#saveOccurrence').textContent='Relier';
+ occurrenceWorkId=workId;
+ occurrenceEntryId=null;
+ const options=indexEntries.slice().sort((a,b)=>{
+   const ka=`${a.type} ${a.name}`.toLocaleLowerCase('fr');
+   const kb=`${b.type} ${b.name}`.toLocaleLowerCase('fr');
+   return ka.localeCompare(kb,'fr',{sensitivity:'base'});
+ });
+ const select=$('#occurrenceWork');
+ select.innerHTML=options.map(i=>`<option value="${i.id}">${i.type==='lieu'?'Lieu':i.type==='personnage'?'Personnage':'Thématique'} — ${esc(i.name)}</option>`).join('');
+ select.dataset.mode='entry';
+ select.disabled=false;
+ $('#occurrenceTitle').textContent='Ajouter une entrée d’Index à cet ouvrage';
+ $('#occurrencePage').value='';
+ $('#occurrenceChapter').value='';
+ $('#occurrenceQuote').value='';
+ $('#occurrenceNote').value='';
+ $('#occurrenceError').style.display='none';
+ $('#occurrenceModal').classList.add('show');
+}
+
+function removeOccurrence(id){
+ if(!editor || !sb)return;
+ const row=occurrences.find(o=>o.id===id);
+ if(!row)return;
+ if(!confirm('Supprimer cette relation d’Index ?'))return;
+ sb.from('occurrences').delete().eq('id',id).then(({error})=>{
+   if(error){ alert(error.message); return; }
+   occurrences=occurrences.filter(o=>o.id!==id);
+   renderIndex();
+   if(row.work_id) showWork(row.work_id);
+ });
+}
+
+function renderIndex(){
+ const active=document.querySelector('[data-index].active')?.dataset.index||'lieu';
+ const entries=indexEntries
+   .filter(x=>x.type===active)
+   .sort((a,b)=>{
+     const clean=s=>(s||'').replace(/^(le|la|les|un|une|des|l')\s+/i,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+     return clean(a.name).localeCompare(clean(b.name),'fr',{sensitivity:'base'});
+   });
+ $('#indexList').innerHTML=entries.map(x=>{
+   const links=occurrences.filter(r=>r.index_entry_id===x.id);
+   const linkedWorks=links.map(r=>({row:r,work:works.find(w=>w.id===r.work_id)})).filter(x=>x.work);
+   return `<article class="card">
+     <div class="index-card-heading">
+       <div>
+         <div class="meta">${active==='lieu'?'Lieu':active==='personnage'?'Personnage':'Thématique'}</div>
+         <h3>${esc(x.name||'Entrée sans nom')}</h3>
+         ${x.notice?`<div class="index-notice">${esc(x.notice)}</div>`:''}
+       </div>
+       ${editor?`<div class="index-heading-actions">
+         <button class="index-edit-compact" onclick="openIndexEditor('${x.id}')">Modifier</button>
+         <button class="index-delete-compact" onclick="deleteIndexEntry('${x.id}')">Supprimer</button>
+       </div>`:''}
+     </div>
+     <div class="index-works">
+       ${linkedWorks.length
+         ? linkedWorks.map(({row,work})=>`<div class="index-work-row"><button class="index-work-link" onclick="openWorkFromTimeline('${work.id}')">${esc(work.title)}</button>${row.page?` <span class="meta">p. ${esc(row.page)}</span>`:''}${editor?` <button class="index-edit-compact" onclick="openOccurrenceEditor('${row.id}')">Modifier</button>
+          <button class="index-remove" onclick="removeOccurrence('${row.id}')">Retirer</button>`:''}</div>`).join('')
+         : '<span class="muted">Aucun ouvrage relié pour le moment.</span>'}
+     </div>
+     ${editor?`<div class="index-card-actions">
+       <button class="index-add" onclick="openOccurrenceModal({entryId:'${x.id}'})">+ Relier un ouvrage</button>
+     </div>`:''}
+   </article>`;
+ }).join('') || '<div class="empty">Aucune entrée dans cette catégorie.</div>';
+}
+let editingArchiveId=null;
+
+function openArchiveEditor(id=null){
+ if(!editor)return;
+ editingArchiveId=id;
+ const d=id?documents.find(x=>x.id===id):null;
+ $('#archiveEditTitle').textContent=d?'Modifier le document':'Ajouter un document';
+ $('#archiveType').value=d?.document_type||'';
+ $('#archiveDocTitle').value=d?.title||'';
+ $('#archiveAuthor').value=d?.author_name||'';
+ $('#archiveDate').value=d?.document_date||'';
+ $('#archiveDescription').value=d?.description||'';
+ $('#archiveUrl').value=d?.url||'';
+ $('#archiveEditError').style.display='none';
+ $('#archiveEditModal').classList.add('show');
+ $('#archiveDocTitle').focus();
+}
+$('#closeArchiveEdit').onclick=()=>$('#archiveEditModal').classList.remove('show');
+
+$('#saveArchiveEdit').onclick=async()=>{
+ if(!editor||!sb)return;
+ const err=$('#archiveEditError');err.style.display='none';
+ const title=$('#archiveDocTitle').value.trim();
+ if(!title){err.textContent='Le titre est obligatoire.';err.style.display='block';return;}
+ const payload={
+   document_type:$('#archiveType').value.trim()||null,
+   title,
+   author_name:$('#archiveAuthor').value.trim()||null,
+   document_date:$('#archiveDate').value.trim()||null,
+   description:$('#archiveDescription').value.trim()||null,
+   url:$('#archiveUrl').value.trim()||null
+ };
+ const result=editingArchiveId
+   ? await sb.from('documents').update(payload).eq('id',editingArchiveId).select('*').single()
+   : await sb.from('documents').insert(payload).select('*').single();
+ if(result.error){err.textContent=result.error.message;err.style.display='block';return;}
+ if(editingArchiveId){const pos=documents.findIndex(d=>d.id===editingArchiveId);if(pos>=0)documents[pos]=result.data;}
+ else documents.push(result.data);
+ editingArchiveId=null;$('#archiveEditModal').classList.remove('show');renderArchives();
+};
+
+async function deleteArchive(id){
+ if(!editor||!sb)return;
+ const d=documents.find(x=>x.id===id);if(!d)return;
+ if(!confirm(`Supprimer le document « ${d.title} » ?`))return;
+ const {error}=await sb.from('documents').delete().eq('id',id);
+ if(error){alert(error.message);return;}
+ documents=documents.filter(x=>x.id!==id);renderArchives();
+}
+
+function renderArchives(){
+ const term=($('#archiveSearch')?.value||'').toLowerCase();
+ const list=documents.filter(d=>(d.title+' '+(d.author_name||'')+' '+(d.description||'')).toLowerCase().includes(term));
+ $('#archiveList').innerHTML=list.map(d=>`<article class="card">
+   <div class="meta">${esc(d.document_type)}</div>
+   <h3>${esc(d.title)}</h3>
+   ${d.author_name?`<div class="author">${esc(d.author_name)}</div>`:''}
+   ${d.document_date?`<div class="pub">${esc(d.document_date)}</div>`:''}
+   ${d.description?`<p>${esc(d.description)}</p>`:''}
+   ${d.url?`<a class="secondary" style="display:inline-block;text-decoration:none;margin-top:8px" href="${esc(d.url)}" target="_blank" rel="noopener">Consulter</a>`:''}
+   ${editor?`<div class="archive-actions">
+     <button class="index-edit-compact" onclick="openArchiveEditor('${d.id}')">Modifier</button>
+     <button class="index-delete-compact" onclick="deleteArchive('${d.id}')">Supprimer</button>
+   </div>`:''}
+ </article>`).join('') || '<div class="empty">Aucun document d’archive renseigné.</div>';
+}
+
+document.querySelectorAll('nav button[data-section]').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ $('#'+b.dataset.section).classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+ window.scrollTo({top:0,behavior:'smooth'});
+}));
+$('#worksSearch').addEventListener('input',renderWorks);
+$('#authorFilter').addEventListener('change',renderWorks);
+$('#publisherFilter').addEventListener('change',renderWorks);
+$('#constitutionSearch').addEventListener('input',renderConstitution);
+$('#archiveSearch').addEventListener('input',renderArchives);
+document.querySelectorAll('[data-index]').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('[data-index]').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ indexType=b.dataset.index;renderIndex();
+}));
+
+$('#addIndexBtn').onclick=()=>{
+ if(!editor)return;
+ $('#indexEntryType').value=indexType||'lieu';
+ $('#indexEntryName').value='';
+ $('#indexEntryNotice').value='';
+ $('#indexEntryError').style.display='none';
+ $('#indexEntryModal').classList.add('show');
+ $('#indexEntryName').focus();
+};
+$('#closeIndexEntry').onclick=()=>$('#indexEntryModal').classList.remove('show');
+
+$('#saveIndexEntry').onclick=async()=>{
+ if(!editor || !sb)return;
+ const type=$('#indexEntryType').value;
+ const name=$('#indexEntryName').value.trim();
+ const notice=$('#indexEntryNotice').value.trim();
+ const err=$('#indexEntryError');
+ err.style.display='none';
+
+ if(!name){
+   err.textContent='Le nom est obligatoire.';
+   err.style.display='block';
+   return;
+ }
+
+ const duplicate=indexEntries.some(x=>
+   x.type===type && String(x.name||'').trim().localeCompare(name,'fr',{sensitivity:'base'})===0
+ );
+ if(duplicate){
+   err.textContent='Cette entrée existe déjà dans cette catégorie.';
+   err.style.display='block';
+   return;
+ }
+
+ const {data,error}=await sb.from('index_entries')
+   .insert({name,type,notice:notice||null})
+   .select('*')
+   .single();
+
+ if(error){
+   err.textContent=error.message;
+   err.style.display='block';
+   return;
+ }
+
+ indexEntries.push(data);
+ $('#indexEntryModal').classList.remove('show');
+ renderIndex();
+ updateHome();
+};
+
+$('#loginBtn').onclick=()=>$('#loginModal').classList.add('show');
+$('#closeLogin').onclick=()=>$('#loginModal').classList.remove('show');
+document.addEventListener('click',e=>{
+ if(e.target?.id==='runDataChecks') runDataChecks();
+ if(e.target?.id==='addAuthorAdmin') openAuthorEditor();
+ if(e.target?.id==='addWorkAdmin') openWorkEditor();
+ if(e.target?.id==='addArchiveBtn') openArchiveEditor();
+});
+$('#doLogin').onclick=async()=>{
+ if(!sb){$('#loginError').style.display='block';$('#loginError').textContent='Configurez d’abord les identifiants Supabase dans index.html.';return;}
+ const {data,error}=await sb.auth.signInWithPassword({email:$('#email').value,password:$('#password').value});
+ if(error){$('#loginError').style.display='block';$('#loginError').textContent=error.message;return;}
+ $('#loginError').style.display='none';$('#loginModal').classList.remove('show');await checkEditor();
+};
+$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';};
+
+async function checkEditor(){
+ if(!sb)return;
+ const {data:{user}}=await sb.auth.getUser();
+ if(!user)return;
+ const {data:profile}=await sb.from('profiles').select('display_name,role').eq('user_id',user.id).maybeSingle();
+ if(profile && (profile.role==='editor'||profile.role==='admin')){
+   editor=true;document.body.classList.add('editor');
+   $('#editorName').textContent='Rédacteur : '+(profile.display_name||user.email);
+   $('#loginBtn').style.display='none';$('#logoutBtn').style.display='block';
+ }
+}
+if(sb){
+ sb.auth.onAuthStateChange((_event)=>setTimeout(checkEditor,0));
+}
+loadPresentation();
+loadData();
+</script>
+</body>
+</html>
