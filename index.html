@@ -831,6 +831,7 @@ async function loadWorkNotes(){
  }
  const profilesResult=await sb.from('profiles').select('user_id,display_name,role').in('role',['editor','admin']);
  editorProfiles=profilesResult.error ? [] : (profilesResult.data||[]);
+ updateChatTitle();
 
  const notesResult=await sb.from('work_notes').select('*');
  if(notesResult.error){
@@ -866,6 +867,18 @@ function pubFor(workId){
  return editions.filter(e=>e.work_id===workId).sort((a,b)=>(a.publication_year||9999)-(b.publication_year||9999))[0];
 }
 
+function getOtherChatUser(){
+ const me=window.currentUserId;
+ const other=(editorProfiles||[]).find(p=>p.user_id!==me);
+ return other?.display_name || 'l’autre rédacteur';
+}
+function updateChatTitle(){
+ const other=getOtherChatUser();
+ const title='Chat avec '+other;
+ const t=$('#chatTitle'), l=$('#chatLauncherLabel');
+ if(t)t.textContent=title;
+ if(l)l.textContent=title;
+}
 function formatChatTime(value){
  const d=new Date(value);
  return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
@@ -2232,9 +2245,9 @@ loadData();
 setTimeout(loadForum,300);
 </script>
 
-<button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span>Chat avec Henri</button>
+<button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span><span id="chatLauncherLabel">Chat avec l’autre rédacteur</span></button>
 <div id="chatWindow" class="chat-window" aria-label="Chat privé">
-  <div class="chat-head"><div><h3>Chat avec Henri</h3><div id="chatStatus" class="chat-status">Connexion…</div></div><button id="chatClose" class="chat-close" aria-label="Fermer">×</button></div>
+  <div class="chat-head"><div><h3 id="chatTitle">Chat avec l’autre rédacteur</h3><div id="chatStatus" class="chat-status">Connexion…</div></div><button id="chatClose" class="chat-close" aria-label="Fermer">×</button></div>
   <div id="chatMessages" class="chat-messages"><div class="chat-empty">Chargement des messages…</div></div>
   <div class="chat-compose"><textarea id="chatInput" rows="1" placeholder="Écrire un message…"></textarea><button id="chatSend" aria-label="Envoyer">➤</button></div>
 </div>
