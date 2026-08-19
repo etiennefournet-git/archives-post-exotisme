@@ -356,7 +356,7 @@ body.modal-open{
       <div id="forumMessages" class="forum-messages">
         <div class="empty">Connectez-vous comme rédacteur pour voir les notes.</div>
       </div>
-      <div id="forumComposer" class="forum-compose" style="display:none">
+      <div id="forumComposer" class="forum-compose">
         <textarea id="forumInput" placeholder="Écrire une note à Henri…"></textarea>
         <button class="primary" id="forumSend">Publier</button>
       </div>
@@ -1849,20 +1849,37 @@ function formatForumDate(value){
 async function loadForum(){
  const messagesEl=$('#forumMessages'), composer=$('#forumComposer'), status=$('#forumStatus');
  if(!messagesEl)return;
- if(!sb){messagesEl.innerHTML='<div class="empty">Supabase n’est pas disponible.</div>';return;}
- if(!editor){
+ if(!sb){
+   status.textContent='Supabase indisponible';
+   messagesEl.innerHTML='<div class="empty">Supabase n’est pas disponible.</div>';
+   composer.style.display='none';
+   return;
+ }
+
+ const {data:{session}}=await sb.auth.getSession();
+ const user=session?.user;
+
+ if(!user){
    status.textContent='Réservé aux rédacteurs';
    messagesEl.innerHTML='<div class="empty">Connectez-vous comme rédacteur pour accéder au carnet de bord.</div>';
    composer.style.display='none';
    return;
  }
+
  status.textContent='Entre rédacteurs';
- const {data,error}=await sb.from('forum_messages').select('id,author_id,body,created_at').order('created_at',{ascending:true});
+ composer.style.display='grid';
+
+ const {data,error}=await sb
+   .from('forum_messages')
+   .select('id,author_id,body,created_at')
+   .order('created_at',{ascending:true});
+
  if(error){
-   messagesEl.innerHTML='<div class="empty">Le carnet de bord n’est pas encore configuré.</div>';
-   console.warn('Forum:',error.message);
+   messagesEl.innerHTML='<div class="empty">Impossible de charger les notes.</div>';
+   console.warn('Forum SELECT:',error.message);
    return;
  }
+
  forumMessages=data||[];
  const ids=[...new Set(forumMessages.map(m=>m.author_id).filter(Boolean))];
  let profiles=[];
@@ -1871,6 +1888,7 @@ async function loadForum(){
    profiles=r.data||[];
  }
  const nameById=Object.fromEntries(profiles.map(p=>[p.user_id,p.display_name||'Rédacteur']));
+
  messagesEl.innerHTML=forumMessages.length
    ? forumMessages.map(m=>`<article class="forum-message"><div class="forum-meta">${esc(nameById[m.author_id]||'Rédacteur')} · ${esc(formatForumDate(m.created_at))}</div><div class="forum-body">${esc(m.body)}</div></article>`).join('')
    : '<div class="empty">Aucune note pour le moment. Écrivez la première.</div>';
@@ -1925,7 +1943,7 @@ if(sb){
 }
 loadPresentation();
 loadData();
-loadForum();
+setTimeout(loadForum,300);
 </script>
 </body>
 </html>
