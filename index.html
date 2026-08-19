@@ -673,6 +673,13 @@ const presentationLabels={
 };
 let presentation={};
 
+
+function workTitleLink(work){
+  if(!work) return '';
+  const title=esc(work.title||'Sans titre');
+  return `<a href="#work-${encodeURIComponent(work.id)}" class="work-link" data-work-id="${esc(work.id)}">${title}</a>`;
+}
+
 function applyPresentation(){
  Object.keys(defaultPresentation).forEach(k=>{
    const el=document.querySelector(`[data-content="${k}"]`);
@@ -1970,6 +1977,18 @@ if(sb){
 loadPresentation();
 loadData();
 setTimeout(loadForum,300);
+
+document.addEventListener('click',e=>{
+ const a=e.target.closest('[data-work-id]');
+ if(!a)return;
+ e.preventDefault();
+ const id=a.dataset.workId;
+ if(typeof openWork==='function'){ openWork(id); return; }
+ if(typeof showWork==='function'){ showWork(id); return; }
+ if(typeof renderWork==='function'){ renderWork(id); return; }
+ location.hash='work-'+id;
+});
+
 </script>
 </body>
 </html>
