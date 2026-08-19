@@ -673,13 +673,6 @@ const presentationLabels={
 };
 let presentation={};
 
-
-function workTitleLink(work){
-  if(!work) return '';
-  const title=esc(work.title||'Sans titre');
-  return `<a href="#work-${encodeURIComponent(work.id)}" class="work-link" data-work-id="${esc(work.id)}">${title}</a>`;
-}
-
 function applyPresentation(){
  Object.keys(defaultPresentation).forEach(k=>{
    const el=document.querySelector(`[data-content="${k}"]`);
@@ -990,7 +983,7 @@ function renderConstitution(){
    const finalStatus=hasCopy?'acquis':s;
    return `<div class="row">
      <div class="date">${w.first_publication_year||'—'}</div>
-     <div><strong>${esc(w.title)}</strong><br><span class="meta">${esc(authorNames(w.id))}</span>${e?`<br><span class="meta">${esc(e.publisher||'')} ${e.collection?'· '+esc(e.collection):''}</span>`:''}</div>
+     <div><button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button><br><span class="meta">${esc(authorNames(w.id))}</span>${e?`<br><span class="meta">${esc(e.publisher||'')} ${e.collection?'· '+esc(e.collection):''}</span>`:''}</div>
      <div class="right"><span class="status ${statusClass(finalStatus)}">${statusLabel(finalStatus)}</span></div>
    </div>`;
  }).join('');
@@ -1977,18 +1970,6 @@ if(sb){
 loadPresentation();
 loadData();
 setTimeout(loadForum,300);
-
-document.addEventListener('click',e=>{
- const a=e.target.closest('[data-work-id]');
- if(!a)return;
- e.preventDefault();
- const id=a.dataset.workId;
- if(typeof openWork==='function'){ openWork(id); return; }
- if(typeof showWork==='function'){ showWork(id); return; }
- if(typeof renderWork==='function'){ renderWork(id); return; }
- location.hash='work-'+id;
-});
-
 </script>
 </body>
 </html>
