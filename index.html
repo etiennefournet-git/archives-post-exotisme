@@ -68,6 +68,19 @@ input[type=search]{min-width:280px}
 .detail{background:var(--paper);border:1px solid var(--line);padding:28px;margin-top:20px}
 .back{border:0;background:none;color:var(--accent);padding:0;margin-bottom:18px}
 .note{border-left:3px solid var(--accent);padding:12px 16px;background:var(--soft);font-size:14px;margin:10px 0}
+.forum-card{margin:48px 0 70px;padding:28px;background:#eeeae2;border:1px solid var(--line);position:relative}
+.forum-card:before{content:"";position:absolute;top:-7px;left:34px;width:72px;height:14px;background:#d8d1c5;transform:rotate(-2deg);opacity:.8}
+.forum-head{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin-bottom:18px}
+.forum-head h3{margin:0}
+.forum-messages{display:grid;gap:10px;margin:18px 0}
+.forum-message{padding:14px 16px;background:var(--paper);border:1px solid #ded9d0;box-shadow:1px 2px 0 rgba(40,38,34,.04)}
+.forum-message .forum-meta{font:10px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.forum-message .forum-body{white-space:pre-wrap;font-size:16px}
+.forum-compose{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:16px}
+.forum-compose textarea{min-height:70px;resize:vertical}
+.forum-private{font-size:14px;color:var(--muted)}
+@media(max-width:760px){.forum-compose{grid-template-columns:1fr}.forum-compose button{width:100%}}
+
 .private{border-left-color:#625773}
 .modal{
  position:fixed;
@@ -332,6 +345,23 @@ body.modal-open{
     <div class="kicker" data-content="home_kicker">Archives · post-exotisme</div>
     <h1 data-content="home_title">Constituer une bibliothèque.<br>Lire ses traces.</h1>
     <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, chronologie, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.</p>
+    <div class="forum-card">
+      <div class="forum-head">
+        <div>
+          <div class="meta">Carnet de bord</div>
+          <h3>Notes entre rédacteurs</h3>
+        </div>
+        <div class="forum-private" id="forumStatus">Espace privé</div>
+      </div>
+      <div id="forumMessages" class="forum-messages">
+        <div class="empty">Connectez-vous comme rédacteur pour voir les notes.</div>
+      </div>
+      <div id="forumComposer" class="forum-compose" style="display:none">
+        <textarea id="forumInput" placeholder="Écrire une note à Henri…"></textarea>
+        <button class="primary" id="forumSend">Publier</button>
+      </div>
+      <p id="forumError" class="note" style="display:none"></p>
+    </div>
   </div>
   <div class="grid">
     <div class="card"><div class="meta">État de la collection</div><h3 id="homeConstitution">—</h3><p>ouvrages acquis dans la collection.</p></div>
@@ -341,7 +371,7 @@ body.modal-open{
 </section>
 
 <section id="constitution" class="section">
-  <div class="sectionhead"><div class="kicker">Collection physique</div><h2>État de la collection <span id="constitutionCount" class="section-count">—</span></h2><p>Suivi des exemplaires recherchés, réservés et acquis. L'exemplaire effectivement possédé est documenté séparément de la bibliographie.</p></div>
+  <div class="sectionhead"><div class="kicker" data-content="collection_kicker">Collection physique</div><h2 data-content="collection_title">État de la collection <span id="constitutionCount" class="section-count">—</span></h2><p data-content="collection_lead">Suivi des exemplaires recherchés, réservés et acquis. L'exemplaire effectivement possédé est documenté séparément de la bibliographie.</p></div>
   <div class="toolbar">
     <input id="constitutionSearch" type="search" placeholder="Rechercher un ouvrage…">
     <select id="constitutionFilter" aria-label="Filtrer l’état de la collection">
@@ -354,7 +384,7 @@ body.modal-open{
 </section>
 
 <section id="ouvrages" class="section">
-  <div class="sectionhead"><div class="kicker">Bibliographie</div><h2>Ouvrages</h2><p>La bibliographie distingue l'œuvre, ses éditions et l'exemplaire effectivement acquis.</p></div>
+  <div class="sectionhead"><div class="kicker" data-content="works_kicker">Bibliographie</div><h2 data-content="works_title">Ouvrages</h2><p data-content="works_lead">La bibliographie distingue l'œuvre, ses éditions et l'exemplaire effectivement acquis.</p></div>
   <div class="toolbar">
     <input id="worksSearch" type="search" placeholder="Titre ou auteur…">
     <select id="authorFilter"><option value="">Tous les auteurs</option></select>
@@ -365,12 +395,12 @@ body.modal-open{
 </section>
 
 <section id="chronologie" class="section">
-  <div class="sectionhead"><div class="kicker">Premières publications</div><h2>Chronologie</h2><p>Une chronologie générale du corpus et des documents associés.</p></div>
+  <div class="sectionhead"><div class="kicker" data-content="timeline_kicker">Premières publications</div><h2 data-content="timeline_title">Chronologie</h2><p data-content="timeline_lead">Une chronologie générale du corpus et des documents associés.</p></div>
   <div id="timeline" class="list"></div>
 </section>
 
 <section id="index" class="section">
-  <div class="sectionhead"><div class="kicker">Index croisé</div><h2>Index</h2><p>Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.</p></div>
+  <div class="sectionhead"><div class="kicker" data-content="index_kicker">Index croisé</div><h2 data-content="index_title">Index</h2><p data-content="index_lead">Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.</p></div>
   <div class="tabs">
     <button class="active" data-index="lieu">Lieux</button>
     <button data-index="personnage">Personnages</button>
@@ -381,7 +411,7 @@ body.modal-open{
 </section>
 
 <section id="archives" class="section">
-  <div class="sectionhead"><div class="kicker">Documents</div><h2>Archives</h2><p>Entretiens, articles, recensions, textes critiques, documents éditoriaux et autres ressources liés au corpus.</p></div>
+  <div class="sectionhead"><div class="kicker" data-content="archives_kicker">Documents</div><h2 data-content="archives_title">Archives</h2><p data-content="archives_lead">Entretiens, articles, recensions, textes critiques, documents éditoriaux et autres ressources liés au corpus.</p></div>
   <div class="toolbar">
     <input id="archiveSearch" type="search" placeholder="Rechercher dans les archives…">
     <button class="secondary editor-only" id="addArchiveBtn">+ Ajouter un document</button>
@@ -594,6 +624,7 @@ const sb = (SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('RE
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[], documents=[], relations=[];
+let forumMessages=[];
 let editor=false;
 
 const $ = s => document.querySelector(s);
@@ -608,14 +639,34 @@ const defaultPresentation={
  about_p1:"<strong>Archives du post-exotisme</strong> est un projet de constitution d'une collection physique et d'une archive de lecture.",
  about_p2:"Le principe est simple : acquérir les ouvrages, documenter les éditions, lire les livres et construire progressivement un index transversal des lieux, personnages et thématiques.",
  about_p3:"La bibliographie peut recenser plusieurs éditions d'une même œuvre à titre documentaire. La Constitution, elle, concerne l'exemplaire effectivement recherché ou acquis.",
- about_p4:"Les rédacteurs disposent en outre d'un espace de <strong>notes internes</strong>, invisible au public, destiné aux échanges pratiques : pistes d'achat, demandes de renseignements, contacts, disponibilité d'un ouvrage, etc."
+ about_p4:"Les rédacteurs disposent en outre d'un espace de <strong>notes internes</strong>, invisible au public, destiné aux échanges pratiques : pistes d'achat, demandes de renseignements, contacts, disponibilité d'un ouvrage, etc.",
+ collection_kicker:'Collection physique',
+ collection_title:'État de la collection',
+ collection_lead:'Suivi des exemplaires recherchés, réservés et acquis. L’exemplaire effectivement possédé est documenté séparément de la bibliographie.',
+ works_kicker:'Bibliographie',
+ works_title:'Ouvrages',
+ works_lead:'La bibliographie distingue l’œuvre, ses éditions et l’exemplaire effectivement acquis.',
+ timeline_kicker:'Premières publications',
+ timeline_title:'Chronologie',
+ timeline_lead:'Une chronologie générale du corpus et des documents associés.',
+ index_kicker:'Index croisé',
+ index_title:'Index',
+ index_lead:'Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.',
+ archives_kicker:'Documents',
+ archives_title:'Archives',
+ archives_lead:'Entretiens, articles, recensions, textes critiques, documents éditoriaux et autres ressources liés au corpus.'
 };
 const presentationLabels={
  brand_subtitle:'Barre latérale — sous-titre',
  home_kicker:'Accueil — surtitre',home_title:'Accueil — titre',home_lead:'Accueil — introduction',
  about_kicker:'À propos — surtitre',about_title:'À propos — titre',
  about_p1:'À propos — paragraphe 1',about_p2:'À propos — paragraphe 2',
- about_p3:'À propos — paragraphe 3',about_p4:'À propos — paragraphe 4'
+ about_p3:'À propos — paragraphe 3',about_p4:'À propos — paragraphe 4',
+ collection_kicker:'Collection — surtitre',collection_title:'Collection — titre',collection_lead:'Collection — introduction',
+ works_kicker:'Ouvrages — surtitre',works_title:'Ouvrages — titre',works_lead:'Ouvrages — introduction',
+ timeline_kicker:'Chronologie — surtitre',timeline_title:'Chronologie — titre',timeline_lead:'Chronologie — introduction',
+ index_kicker:'Index — surtitre',index_title:'Index — titre',index_lead:'Index — introduction',
+ archives_kicker:'Archives — surtitre',archives_title:'Archives — titre',archives_lead:'Archives — introduction'
 };
 let presentation={};
 
@@ -1789,6 +1840,58 @@ $('#saveIndexEntry').onclick=async()=>{
  updateHome();
 };
 
+
+function formatForumDate(value){
+ const d=new Date(value);
+ if(Number.isNaN(d.getTime())) return '';
+ return new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);
+}
+async function loadForum(){
+ const messagesEl=$('#forumMessages'), composer=$('#forumComposer'), status=$('#forumStatus');
+ if(!messagesEl)return;
+ if(!sb){messagesEl.innerHTML='<div class="empty">Supabase n’est pas disponible.</div>';return;}
+ if(!editor){
+   status.textContent='Réservé aux rédacteurs';
+   messagesEl.innerHTML='<div class="empty">Connectez-vous comme rédacteur pour accéder au carnet de bord.</div>';
+   composer.style.display='none';
+   return;
+ }
+ status.textContent='Entre rédacteurs';
+ const {data,error}=await sb.from('forum_messages').select('id,author_id,body,created_at').order('created_at',{ascending:true});
+ if(error){
+   messagesEl.innerHTML='<div class="empty">Le carnet de bord n’est pas encore configuré.</div>';
+   console.warn('Forum:',error.message);
+   return;
+ }
+ forumMessages=data||[];
+ const ids=[...new Set(forumMessages.map(m=>m.author_id).filter(Boolean))];
+ let profiles=[];
+ if(ids.length){
+   const r=await sb.from('profiles').select('user_id,display_name').in('user_id',ids);
+   profiles=r.data||[];
+ }
+ const nameById=Object.fromEntries(profiles.map(p=>[p.user_id,p.display_name||'Rédacteur']));
+ messagesEl.innerHTML=forumMessages.length
+   ? forumMessages.map(m=>`<article class="forum-message"><div class="forum-meta">${esc(nameById[m.author_id]||'Rédacteur')} · ${esc(formatForumDate(m.created_at))}</div><div class="forum-body">${esc(m.body)}</div></article>`).join('')
+   : '<div class="empty">Aucune note pour le moment. Écrivez la première.</div>';
+}
+async function sendForumMessage(){
+ const input=$('#forumInput'), err=$('#forumError');
+ if(!sb || !editor || !input)return;
+ const body=input.value.trim();
+ err.style.display='none';
+ if(!body)return;
+ const {data:{user}}=await sb.auth.getUser();
+ if(!user){err.textContent='Vous devez être connecté comme rédacteur.';err.style.display='block';return;}
+ const {error}=await sb.from('forum_messages').insert({author_id:user.id,body});
+ if(error){err.textContent=error.message;err.style.display='block';return;}
+ input.value='';
+ await loadForum();
+}
+$('#forumSend')?.addEventListener('click',sendForumMessage);
+$('#forumInput')?.addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&e.key==='Enter')sendForumMessage();
+});
 $('#loginBtn').onclick=()=>$('#loginModal').classList.add('show');
 $('#closeLogin').onclick=()=>$('#loginModal').classList.remove('show');
 document.addEventListener('click',e=>{
@@ -1803,7 +1906,7 @@ $('#doLogin').onclick=async()=>{
  if(error){$('#loginError').style.display='block';$('#loginError').textContent=error.message;return;}
  $('#loginError').style.display='none';$('#loginModal').classList.remove('show');await checkEditor();
 };
-$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';};
+$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';await loadForum();};
 
 async function checkEditor(){
  if(!sb)return;
@@ -1815,12 +1918,14 @@ async function checkEditor(){
    $('#editorName').textContent='Rédacteur : '+(profile.display_name||user.email);
    $('#loginBtn').style.display='none';$('#logoutBtn').style.display='block';
  }
+ await loadForum();
 }
 if(sb){
  sb.auth.onAuthStateChange((_event)=>setTimeout(checkEditor,0));
 }
 loadPresentation();
 loadData();
+loadForum();
 </script>
 </body>
 </html>
