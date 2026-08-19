@@ -79,6 +79,15 @@ input[type=search]{min-width:280px}
 .forum-compose{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:16px}
 .forum-compose textarea{min-height:70px;resize:vertical}
 .forum-private{font-size:14px;color:var(--muted)}
+.work-notes{margin:34px 0}
+.work-notes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.work-note-card{padding:18px;background:var(--soft);border:1px solid var(--line)}
+.work-note-card h4{margin:0 0 10px;font-size:14px}
+.work-note-card textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box}
+.work-note-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.work-note-status{font-size:12px;color:var(--muted);min-height:16px;margin-top:6px}
+@media(max-width:760px){.work-notes-grid{grid-template-columns:1fr}}
+
 .forum-delete{border:0;background:none;color:var(--muted);font:inherit;font-size:11px;margin-left:10px;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .forum-delete:hover{color:var(--text)}
 
@@ -628,6 +637,8 @@ const sb = (SUPABASE_URL.startsWith('http') && !SUPABASE_ANON_KEY.startsWith('RE
 
 let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[], documents=[], relations=[];
 let forumMessages=[];
+let workNotes=[];
+let editorProfiles=[];
 let editor=false;
 
 const $ = s => document.querySelector(s);
@@ -737,6 +748,13 @@ async function loadData(){
      q('documents','*'),
      q('relations','*')
    ]);
+   const notesResult=await sb.from('work_notes').select('*');
+   if(notesResult.error){
+     console.warn('Notes d’ouvrage non disponibles :',notesResult.error.message);
+     workNotes=[];
+   }else{
+     workNotes=notesResult.data||[];
+   }
    await loadWorkAuthors();
    renderAll();
  }catch(e){
@@ -906,6 +924,74 @@ function renderWorks(){
    </article>`;
  }).join('') || '<div class="empty">Aucun ouvrage ne correspond aux critères.</div>';
 }
+
+function renderWorkNotes(workId){
+ if(!editor || !sb)return '';
+
+ const mineId=window.currentUserId||null;
+ const myNote=workNotes.find(n=>n.work_id===workId && n.author_id===mineId);
+ const otherNotes=workNotes.filter(n=>n.work_id===workId && n.author_id!==mineId);
+ const henriNote=otherNotes[0]||null;
+ const henriName=henriNote?.author_name || 'Henri';
+
+ return `<div class="work-notes">
+   <h3>Notes internes</h3>
+   <div class="work-notes-grid">
+     <div class="work-note-card">
+       <h4>Mes notes</h4>
+       <textarea id="workNoteMine-${workId}" placeholder="Note personnelle sur cet ouvrage…">${esc(myNote?.body||'')}</textarea>
+       <div class="work-note-actions">
+         <button class="secondary" onclick="saveWorkNote('${workId}','mine')">Enregistrer</button>
+       </div>
+       <div id="workNoteStatusMine-${workId}" class="work-note-status"></div>
+     </div>
+     <div class="work-note-card">
+       <h4>Notes d'Henri</h4>
+       <textarea id="workNoteHenri-${workId}" placeholder="Note d'Henri…" ${henriNote ? 'readonly' : 'readonly'}>${esc(henriNote?.body||'')}</textarea>
+       <div class="work-note-actions">
+         <span class="work-note-status">${henriNote?'Note enregistrée par '+esc(henriName):'Aucune note d’Henri.'}</span>
+       </div>
+     </div>
+   </div>
+ </div>`;
+}
+
+async function saveWorkNote(workId,which){
+ if(!sb || !editor)return;
+ const mineId=window.currentUserId;
+ if(!mineId)return;
+ if(which!=='mine')return;
+
+ const input=$(`#workNoteMine-${workId}`);
+ const status=$(`#workNoteStatusMine-${workId}`);
+ if(!input)return;
+ if(status)status.textContent='Enregistrement…';
+
+ const body=input.value.trim();
+ const existing=workNotes.find(n=>n.work_id===workId && n.author_id===mineId);
+
+ let result;
+ if(!body && existing){
+   result=await sb.from('work_notes').delete().eq('id',existing.id);
+ }else if(body){
+   result=await sb.from('work_notes').upsert(
+     {work_id:workId,author_id:mineId,body,updated_at:new Date().toISOString()},
+     {onConflict:'work_id,author_id'}
+   );
+ }else{
+   if(status)status.textContent='Aucune note.';
+   return;
+ }
+
+ if(result.error){
+   if(status)status.textContent=result.error.message;
+   return;
+ }
+
+ const refreshed=await sb.from('work_notes').select('*');
+ if(!refreshed.error)workNotes=refreshed.data||[];
+ if(status)status.textContent='Enregistré.';
+}
 function showWork(id){
  const w=works.find(x=>x.id===id); if(!w)return;
  const es=editions.filter(e=>e.work_id===id).sort((a,b)=>(a.publication_year||0)-(b.publication_year||0));
@@ -922,6 +1008,7 @@ function showWork(id){
    </div>
    ${w.notice?`<p>${esc(w.notice)}</p>`:''}
    ${w.verification_note?`<div class="note">${esc(w.verification_note)}</div>`:''}
+   ${editor?renderWorkNotes(id):''}
    <h3>Index</h3>
    ${(() => {
       const rows=occurrences.filter(o=>o.work_id===id);
@@ -969,21 +1056,43 @@ function showWork(id){
 function renderConstitution(){
  const term=($('#constitutionSearch')?.value||'').toLowerCase();
  const filter=$('#constitutionFilter')?.value||'';
- const rows=works.map(w=>({w,e:pubFor(w.id)})).filter(x=>{
+
+ // Un ouvrage est acquis dès qu'un exemplaire de N'IMPORTE LAQUELLE de ses éditions
+ // est présent dans la collection.
+ const acquiredWorkIds=new Set(
+   copies.map(c=>{
+     const edition=editions.find(e=>e.id===c.edition_id);
+     return edition?.work_id||null;
+   }).filter(Boolean)
+ );
+
+ const rows=works.map(w=>({
+   w,
+   e:pubFor(w.id),
+   hasCopy:acquiredWorkIds.has(w.id)
+ })).filter(x=>{
    const text=(x.w.title+' '+authorNames(x.w.id)).toLowerCase();
    if(!text.includes(term))return false;
-   const s=x.e?.constitution_status||'a_rechercher';
-   const hasCopy=copies.some(c=>x.e&&c.edition_id===x.e.id);
-   const finalStatus=hasCopy?'acquis':s;
-   return !filter || finalStatus===filter;
+
+   const status=x.hasCopy ? 'acquis' : (x.e?.constitution_status||'a_rechercher');
+   return !filter || status===filter;
  });
- $('#constitutionList').innerHTML=rows.map(({w,e})=>{
-   const s=e?.constitution_status||'a_rechercher';
-   const hasCopy=copies.some(c=>e&&c.edition_id===e.id);
-   const finalStatus=hasCopy?'acquis':s;
+
+ $('#constitutionList').innerHTML=rows.map(({w,e,hasCopy})=>{
+   const finalStatus=hasCopy?'acquis':(e?.constitution_status||'a_rechercher');
+
+   // Pour l'information secondaire, on affiche l'édition effectivement acquise
+   // lorsqu'il y en a une ; sinon l'édition de référence.
+   const acquiredEdition=hasCopy
+     ? editions.find(ed=>ed.work_id===w.id && copies.some(c=>c.edition_id===ed.id))
+     : e;
+   const editionMeta=acquiredEdition
+     ? `${esc(acquiredEdition.publisher||'')} ${acquiredEdition.collection?'· '+esc(acquiredEdition.collection):''}`
+     : '';
+
    return `<div class="row">
      <div class="date">${w.first_publication_year||'—'}</div>
-     <div><button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button><br><span class="meta">${esc(authorNames(w.id))}</span>${e?`<br><span class="meta">${esc(e.publisher||'')} ${e.collection?'· '+esc(e.collection):''}</span>`:''}</div>
+     <div><button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button><br><span class="meta">${esc(authorNames(w.id))}</span>${editionMeta?`<br><span class="meta">${editionMeta}</span>`:''}</div>
      <div class="right"><span class="status ${statusClass(finalStatus)}">${statusLabel(finalStatus)}</span></div>
    </div>`;
  }).join('');
@@ -1950,12 +2059,13 @@ $('#doLogin').onclick=async()=>{
  if(error){$('#loginError').style.display='block';$('#loginError').textContent=error.message;return;}
  $('#loginError').style.display='none';$('#loginModal').classList.remove('show');await checkEditor();
 };
-$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';await loadForum();};
+$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();window.currentUserId=null;editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';await loadForum();};
 
 async function checkEditor(){
  if(!sb)return;
  const {data:{user}}=await sb.auth.getUser();
- if(!user)return;
+ if(!user){window.currentUserId=null;return;}
+ window.currentUserId=user.id;
  const {data:profile}=await sb.from('profiles').select('display_name,role').eq('user_id',user.id).maybeSingle();
  if(profile && (profile.role==='editor'||profile.role==='admin')){
    editor=true;document.body.classList.add('editor');
