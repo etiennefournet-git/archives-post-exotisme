@@ -2230,7 +2230,6 @@ if(sb){
 loadPresentation();
 loadData();
 setTimeout(loadForum,300);
-initChatUI();
 </script>
 
 <button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span>Chat avec Henri</button>
@@ -2239,5 +2238,6 @@ initChatUI();
   <div id="chatMessages" class="chat-messages"><div class="chat-empty">Chargement des messages…</div></div>
   <div class="chat-compose"><textarea id="chatInput" rows="1" placeholder="Écrire un message…"></textarea><button id="chatSend" aria-label="Envoyer">➤</button></div>
 </div>
+<script>initChatUI();</script>
 </body>
 </html>
