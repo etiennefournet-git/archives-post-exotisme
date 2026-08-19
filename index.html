@@ -376,6 +376,27 @@ nav button:hover{transform:translateX(2px)}
 @media (max-width:1100px){
  .hero h1{white-space:normal;max-width:900px}
 }
+
+/* Private realtime chat */
+.chat-launcher{display:none;position:fixed;right:24px;bottom:24px;z-index:1000;border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:999px;cursor:pointer;font-family:inherit;box-shadow:0 8px 28px rgba(0,0,0,.12)}
+.chat-launcher .chat-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7a9b76;margin-right:7px;vertical-align:1px}
+.chat-window{display:none;position:fixed;right:24px;bottom:78px;width:360px;max-width:calc(100vw - 32px);height:470px;z-index:999;border:1px solid var(--line);background:var(--paper);box-shadow:0 18px 55px rgba(0,0,0,.16);flex-direction:column}
+body.editor .chat-launcher{display:block}
+body.editor .chat-window.open{display:flex}
+.chat-head{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--line)}
+.chat-head h3{margin:0;font-size:17px}.chat-status{font-size:11px;color:var(--muted);margin-top:3px}
+.chat-close{border:0;background:none;font-size:20px;cursor:pointer;padding:2px 5px}
+.chat-messages{flex:1;overflow:auto;padding:16px;background:rgba(0,0,0,.018)}
+.chat-empty{color:var(--muted);font-style:italic;font-size:13px;padding:20px 4px}
+.chat-message{max-width:82%;margin:0 0 12px}.chat-message.mine{margin-left:auto;text-align:right}
+.chat-author{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:3px}
+.chat-bubble{display:inline-block;padding:9px 12px;border:1px solid var(--line);line-height:1.4;font-size:14px;text-align:left}
+.chat-message.mine .chat-bubble{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chat-time{font-size:10px;color:var(--muted);margin-top:3px}
+.chat-compose{display:flex;border-top:1px solid var(--line)}
+#chatInput{flex:1;border:0;padding:13px 12px;resize:none;min-height:44px;max-height:110px;background:transparent;font:inherit;outline:none}
+#chatSend{border:0;border-left:1px solid var(--line);background:transparent;padding:0 15px;cursor:pointer}
+@media(max-width:600px){.chat-window{right:16px;bottom:70px;width:calc(100vw - 32px);height:55vh}.chat-launcher{right:16px;bottom:16px}}
 </style>
 </head>
 <body>
@@ -680,6 +701,8 @@ let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[
 let forumMessages=[];
 let workNotes=[];
 let editMode=false;
+let chatMessages=[];
+let chatChannel=null;
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
@@ -842,8 +865,56 @@ function authorNames(workId){
 function pubFor(workId){
  return editions.filter(e=>e.work_id===workId).sort((a,b)=>(a.publication_year||9999)-(b.publication_year||9999))[0];
 }
+
+function formatChatTime(value){
+ const d=new Date(value);
+ return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+}
+function renderChat(){
+ const box=$('#chatMessages'); if(!box)return;
+ if(!chatMessages.length){box.innerHTML='<div class="chat-empty">Aucun message pour le moment.</div>';return;}
+ const me=window.currentUserId;
+ box.innerHTML=chatMessages.map(m=>{
+   const mine=m.author_id===me;
+   const name=mine?'Étienne':(workNoteAuthorNames[m.author_id]||'Henri');
+   return `<div class="chat-message ${mine?'mine':''}"><div class="chat-author">${esc(name)}</div><div class="chat-bubble">${esc(m.body).replace(/\n/g,'<br>')}</div><div class="chat-time">${formatChatTime(m.created_at)}</div></div>`;
+ }).join('');
+ box.scrollTop=box.scrollHeight;
+}
+async function loadChat(){
+ if(!sb || !editor || !window.currentUserId)return;
+ const result=await sb.from('chat_messages').select('id,author_id,body,created_at').order('created_at',{ascending:true});
+ if(result.error){console.warn('Chat non disponible :',result.error.message);$('#chatStatus').textContent='Chat indisponible';chatMessages=[];renderChat();return;}
+ chatMessages=result.data||[];$('#chatStatus').textContent='Privé · temps réel';renderChat();
+ if(chatChannel)sb.removeChannel(chatChannel);
+ chatChannel=sb.channel('private-chat-messages').on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},payload=>{
+   if(payload.new && !chatMessages.some(m=>m.id===payload.new.id)){chatMessages.push(payload.new);chatMessages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));renderChat();}
+ }).subscribe(status=>{if(status==='SUBSCRIBED')$('#chatStatus').textContent='Privé · en direct';});
+}
+async function sendChat(){
+ const input=$('#chatInput'), body=input?.value.trim();
+ if(!body || !sb || !window.currentUserId)return;
+ const button=$('#chatSend'); button.disabled=true;
+ const result=await sb.from('chat_messages').insert({author_id:window.currentUserId,body});
+ button.disabled=false;
+ if(result.error){$('#chatStatus').textContent='Erreur d’envoi';console.warn('Erreur chat :',result.error.message);return;}
+ input.value='';input.focus();
+}
+function initChatUI(){
+ const launcher=$('#chatLauncher'),win=$('#chatWindow'),close=$('#chatClose'),send=$('#chatSend'),input=$('#chatInput');
+ if(!launcher||!win)return;
+ launcher.onclick=()=>{win.classList.add('open');renderChat();setTimeout(()=>input?.focus(),50)};
+ close.onclick=()=>win.classList.remove('open');send.onclick=sendChat;
+ input?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+}
 function renderAll(error){
  if(error) console.warn(error);
+ if(editor && window.currentUserId){loadChat();}else{
+   chatMessages=[];
+   if(chatChannel){sb.removeChannel(chatChannel);chatChannel=null;}
+   const cw=$('#chatWindow'); if(cw)cw.classList.remove('open');
+   renderChat();
+ }
  populateWorkFilters();
  renderAuthorAdmin();
  renderWorks(); $('#constitutionFilter')?.addEventListener('change',renderConstitution);
@@ -2159,6 +2230,14 @@ if(sb){
 loadPresentation();
 loadData();
 setTimeout(loadForum,300);
+initChatUI();
 </script>
+
+<button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span>Chat avec Henri</button>
+<div id="chatWindow" class="chat-window" aria-label="Chat privé">
+  <div class="chat-head"><div><h3>Chat avec Henri</h3><div id="chatStatus" class="chat-status">Connexion…</div></div><button id="chatClose" class="chat-close" aria-label="Fermer">×</button></div>
+  <div id="chatMessages" class="chat-messages"><div class="chat-empty">Chargement des messages…</div></div>
+  <div class="chat-compose"><textarea id="chatInput" rows="1" placeholder="Écrire un message…"></textarea><button id="chatSend" aria-label="Envoyer">➤</button></div>
+</div>
 </body>
 </html>
