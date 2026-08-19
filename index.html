@@ -639,6 +639,7 @@ let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[
 let forumMessages=[];
 let workNotes=[];
 let editorProfiles=[];
+let workNoteAuthorNames={};
 let editor=false;
 
 const $ = s => document.querySelector(s);
@@ -754,6 +755,13 @@ async function loadData(){
      workNotes=[];
    }else{
      workNotes=notesResult.data||[];
+     const noteAuthorIds=[...new Set(workNotes.map(n=>n.author_id).filter(Boolean))];
+     if(noteAuthorIds.length){
+       const profilesResult=await sb.from('profiles').select('user_id,display_name').in('user_id',noteAuthorIds);
+       workNoteAuthorNames=Object.fromEntries(
+         (profilesResult.data||[]).map(p=>[p.user_id,p.display_name||'Rédacteur'])
+       );
+     }
    }
    await loadWorkAuthors();
    renderAll();
@@ -928,54 +936,56 @@ function renderWorks(){
 function renderWorkNotes(workId){
  if(!editor || !sb)return '';
 
- const mineId=window.currentUserId||null;
- const myNote=workNotes.find(n=>n.work_id===workId && n.author_id===mineId);
- const otherNotes=workNotes.filter(n=>n.work_id===workId && n.author_id!==mineId);
- const henriNote=otherNotes[0]||null;
- const henriName=henriNote?.author_name || 'Henri';
+ const notes=workNotes.filter(n=>n.work_id===workId);
+ const authorIds=[...new Set(notes.map(n=>n.author_id).filter(Boolean))];
+
+ // Keep the current editor visible even when they have not written a note yet.
+ const currentId=window.currentUserId||null;
+ if(currentId && !authorIds.includes(currentId))authorIds.push(currentId);
+
+ const cards=authorIds.map(authorId=>{
+   const note=notes.find(n=>n.author_id===authorId);
+   const isMine=authorId===currentId;
+   const name=workNoteAuthorNames[authorId]||'Rédacteur';
+
+   return `<div class="work-note-card">
+     <h4>Notes de ${esc(name)}</h4>
+     <textarea id="workNote-${authorId}-${workId}"
+       placeholder="Note sur cet ouvrage…"
+       ${isMine?'':'readonly'}>${esc(note?.body||'')}</textarea>
+     ${isMine
+       ? `<div class="work-note-actions">
+            <button class="secondary" onclick="saveWorkNote('${workId}')">Enregistrer</button>
+          </div>
+          <div id="workNoteStatus-${workId}" class="work-note-status"></div>`
+       : `<div class="work-note-status">${note?'':'Aucune note pour le moment.'}</div>`}
+   </div>`;
+ }).join('');
 
  return `<div class="work-notes">
    <h3>Notes internes</h3>
-   <div class="work-notes-grid">
-     <div class="work-note-card">
-       <h4>Mes notes</h4>
-       <textarea id="workNoteMine-${workId}" placeholder="Note personnelle sur cet ouvrage…">${esc(myNote?.body||'')}</textarea>
-       <div class="work-note-actions">
-         <button class="secondary" onclick="saveWorkNote('${workId}','mine')">Enregistrer</button>
-       </div>
-       <div id="workNoteStatusMine-${workId}" class="work-note-status"></div>
-     </div>
-     <div class="work-note-card">
-       <h4>Notes d'Henri</h4>
-       <textarea id="workNoteHenri-${workId}" placeholder="Note d'Henri…" ${henriNote ? 'readonly' : 'readonly'}>${esc(henriNote?.body||'')}</textarea>
-       <div class="work-note-actions">
-         <span class="work-note-status">${henriNote?'Note enregistrée par '+esc(henriName):'Aucune note d’Henri.'}</span>
-       </div>
-     </div>
-   </div>
+   <div class="work-notes-grid">${cards}</div>
  </div>`;
 }
-
-async function saveWorkNote(workId,which){
+async function saveWorkNote(workId){
  if(!sb || !editor)return;
- const mineId=window.currentUserId;
- if(!mineId)return;
- if(which!=='mine')return;
+ const authorId=window.currentUserId;
+ if(!authorId)return;
 
- const input=$(`#workNoteMine-${workId}`);
- const status=$(`#workNoteStatusMine-${workId}`);
+ const input=$(`#workNote-${authorId}-${workId}`);
+ const status=$(`#workNoteStatus-${workId}`);
  if(!input)return;
  if(status)status.textContent='Enregistrement…';
 
  const body=input.value.trim();
- const existing=workNotes.find(n=>n.work_id===workId && n.author_id===mineId);
+ const existing=workNotes.find(n=>n.work_id===workId && n.author_id===authorId);
 
  let result;
  if(!body && existing){
    result=await sb.from('work_notes').delete().eq('id',existing.id);
  }else if(body){
    result=await sb.from('work_notes').upsert(
-     {work_id:workId,author_id:mineId,body,updated_at:new Date().toISOString()},
+     {work_id:workId,author_id:authorId,body,updated_at:new Date().toISOString()},
      {onConflict:'work_id,author_id'}
    );
  }else{
@@ -989,7 +999,16 @@ async function saveWorkNote(workId,which){
  }
 
  const refreshed=await sb.from('work_notes').select('*');
- if(!refreshed.error)workNotes=refreshed.data||[];
+ if(!refreshed.error){
+   workNotes=refreshed.data||[];
+   const ids=[...new Set(workNotes.map(n=>n.author_id).filter(Boolean))];
+   if(ids.length){
+     const pr=await sb.from('profiles').select('user_id,display_name').in('user_id',ids);
+     workNoteAuthorNames=Object.fromEntries(
+       (pr.data||[]).map(p=>[p.user_id,p.display_name||'Rédacteur'])
+     );
+   }
+ }
  if(status)status.textContent='Enregistré.';
 }
 function showWork(id){
