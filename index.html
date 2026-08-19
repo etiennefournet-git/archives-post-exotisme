@@ -45,8 +45,7 @@ select option{background:var(--paper);color:var(--ink)}
 input[type=search]{min-width:280px}
 .primary{background:var(--dark);color:#fff;border:1px solid var(--dark);padding:9px 14px}
 .secondary{background:none;border:1px solid var(--line);padding:9px 14px}
-.timeline-link{border:0;background:none;padding:0;text-align:left;color:var(--ink);font-weight:700;font-size:inherit}
-.timeline-link:hover{color:var(--accent);text-decoration:underline}
+.work-link{border:0;background:none;padding:0;text-align:left;color:var(--ink);font-weight:700;font-size:inherit}.work-link:hover{color:var(--accent);text-decoration:underline}
 .edition-link{margin:8px 0 0}.edition-link a{color:var(--accent);text-decoration:none}.edition-link a:hover{text-decoration:underline}.copy-card{border:1px solid var(--line);padding:14px;margin:10px 0;background:var(--paper)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
 .card{background:var(--paper);padding:22px}
@@ -329,6 +328,17 @@ body.modal-open{
 #presentationFields textarea{width:100%;min-height:90px;resize:vertical}
 
 .section-count{font-size:.72em;font-weight:500;color:var(--muted);margin-left:.45rem;white-space:nowrap}
+
+.grid .card p{
+  margin:8px 0 0;
+  font:inherit;
+  font-size:15px;
+  line-height:1.4;
+  text-transform:none;
+  letter-spacing:normal;
+  color:var(--muted);
+}
+
 </style>
 </head>
 <body>
@@ -340,7 +350,6 @@ body.modal-open{
     <div class="navgroup">Collection</div>
     <button data-section="constitution">État de la collection</button>
     <button data-section="ouvrages">Ouvrages</button>
-    <button data-section="chronologie">Chronologie</button>
     <div class="navgroup">Index & archives</div>
     <button data-section="index">Index</button>
     <button data-section="archives">Archives</button>
@@ -356,7 +365,7 @@ body.modal-open{
   <div class="hero">
     <div class="kicker" data-content="home_kicker">Archives · post-exotisme</div>
     <h1 data-content="home_title">Constituer une bibliothèque.<br>Lire ses traces.</h1>
-    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, chronologie, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.</p>
+    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.</p>
     <div class="forum-card">
       <div class="forum-head">
         <div>
@@ -378,7 +387,7 @@ body.modal-open{
   <div class="grid">
     <div class="card"><div class="meta">État de la collection</div><h3 id="homeConstitution">—</h3><p>ouvrages acquis dans la collection.</p></div>
     <div class="card"><div class="meta">Bibliographie</div><h3 id="homeWorks">—</h3><p>ouvrages recensés.</p></div>
-    <div class="card"><div class="meta">Index</div><h3 id="homeIndex">—</h3><p>entrées d'index constituées par les lectures.</p></div>
+    <div class="card"><div class="meta">Index</div><h3 id="homeIndex">0</h3><p>entrées d'index constituées par les lectures.</p></div>
   </div>
 </section>
 
@@ -404,11 +413,6 @@ body.modal-open{
   </div>
   <div id="worksGrid" class="grid"></div>
   <div id="workDetail"></div>
-</section>
-
-<section id="chronologie" class="section">
-  <div class="sectionhead"><div class="kicker" data-content="timeline_kicker">Premières publications</div><h2 data-content="timeline_title">Chronologie</h2><p data-content="timeline_lead">Une chronologie générale du corpus et des documents associés.</p></div>
-  <div id="timeline" class="list"></div>
 </section>
 
 <section id="index" class="section">
@@ -648,7 +652,7 @@ const defaultPresentation={
  brand_subtitle:'bibliographie · collection · lectures',
  home_kicker:'Archives · post-exotisme',
  home_title:'Constituer une bibliothèque.<br>Lire ses traces.',
- home_lead:'Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, chronologie, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.',
+ home_lead:'Une archive indépendante consacrée au post-exotisme : ouvrages, éditions, collection physique, archives documentaires et index des lieux, personnages et thématiques rencontrés dans les lectures.',
  about_kicker:'Le projet',
  about_title:'À propos',
  about_p1:"<strong>Archives du post-exotisme</strong> est un projet de constitution d'une collection physique et d'une archive de lecture.",
@@ -661,9 +665,6 @@ const defaultPresentation={
  works_kicker:'Bibliographie',
  works_title:'Ouvrages',
  works_lead:'La bibliographie distingue l’œuvre, ses éditions et l’exemplaire effectivement acquis.',
- timeline_kicker:'Premières publications',
- timeline_title:'Chronologie',
- timeline_lead:'Une chronologie générale du corpus et des documents associés.',
  index_kicker:'Index croisé',
  index_title:'Index',
  index_lead:'Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.',
@@ -679,7 +680,6 @@ const presentationLabels={
  about_p3:'À propos — paragraphe 3',about_p4:'À propos — paragraphe 4',
  collection_kicker:'Collection — surtitre',collection_title:'Collection — titre',collection_lead:'Collection — introduction',
  works_kicker:'Ouvrages — surtitre',works_title:'Ouvrages — titre',works_lead:'Ouvrages — introduction',
- timeline_kicker:'Chronologie — surtitre',timeline_title:'Chronologie — titre',timeline_lead:'Chronologie — introduction',
  index_kicker:'Index — surtitre',index_title:'Index — titre',index_lead:'Index — introduction',
  archives_kicker:'Archives — surtitre',archives_title:'Archives — titre',archives_lead:'Archives — introduction'
 };
@@ -749,20 +749,10 @@ async function loadData(){
      q('documents','*'),
      q('relations','*')
    ]);
-   const notesResult=await sb.from('work_notes').select('*');
-   if(notesResult.error){
-     console.warn('Notes d’ouvrage non disponibles :',notesResult.error.message);
-     workNotes=[];
-   }else{
-     workNotes=notesResult.data||[];
-     const noteAuthorIds=[...new Set(workNotes.map(n=>n.author_id).filter(Boolean))];
-     if(noteAuthorIds.length){
-       const profilesResult=await sb.from('profiles').select('user_id,display_name').in('user_id',noteAuthorIds);
-       workNoteAuthorNames=Object.fromEntries(
-         (profilesResult.data||[]).map(p=>[p.user_id,p.display_name||'Rédacteur'])
-       );
-     }
-   }
+   // Les notes internes ne sont jamais chargées pour les visiteurs.
+   // Elles sont chargées uniquement après authentification comme rédacteur.
+   workNotes=[];
+   workNoteAuthorNames={};
    await loadWorkAuthors();
    renderAll();
  }catch(e){
@@ -770,6 +760,38 @@ async function loadData(){
    renderAll(e.message);
  }
 }
+
+async function loadWorkNotes(){
+ if(!sb || !editor){
+   workNotes=[];
+   workNoteAuthorNames={};
+   editorProfiles=[];
+   return;
+ }
+ const profilesResult=await sb.from('profiles').select('user_id,display_name,role').in('role',['editor','admin']);
+ editorProfiles=profilesResult.error ? [] : (profilesResult.data||[]);
+
+ const notesResult=await sb.from('work_notes').select('*');
+ if(notesResult.error){
+   console.warn('Notes d’ouvrage non disponibles :',notesResult.error.message);
+   workNotes=[];
+   workNoteAuthorNames={};
+   return;
+ }
+ workNotes=notesResult.data||[];
+ workNoteAuthorNames=Object.fromEntries(
+   editorProfiles.map(p=>[p.user_id,p.display_name||'Rédacteur'])
+ );
+ const missingIds=[...new Set(workNotes.map(n=>n.author_id).filter(Boolean))]
+   .filter(id=>!workNoteAuthorNames[id]);
+ if(missingIds.length){
+   const missing=await sb.from('profiles').select('user_id,display_name').in('user_id',missingIds);
+   Object.assign(workNoteAuthorNames,
+     Object.fromEntries((missing.data||[]).map(p=>[p.user_id,p.display_name||'Rédacteur']))
+   );
+ }
+}
+
 let workAuthors=[];
 async function loadWorkAuthors(){
  if(!sb)return;
@@ -787,7 +809,7 @@ function renderAll(error){
  populateWorkFilters();
  renderAuthorAdmin();
  renderWorks(); $('#constitutionFilter')?.addEventListener('change',renderConstitution);
- renderConstitution(); renderTimeline(); renderIndex(); renderArchives(); updateHome();
+ renderConstitution(); renderIndex(); renderArchives(); updateHome();
 }
 function updateHome(){
  $('#homeWorks').textContent=works.length||'0';
@@ -804,7 +826,8 @@ function updateHome(){
  $('#homeConstitution').textContent=`${acquired} / ${total}`;
  $('#constitutionCount').textContent=`${acquired} / ${total}`;
 
- $('#homeIndex').textContent=indexEntries.length||'0';
+ const indexCount=Array.isArray(indexEntries) ? indexEntries.length : 0;
+ $('#homeIndex').textContent=String(indexCount);
 }
 function statusLabel(s){
  return {acquis:'Acquis',a_rechercher:'Recherche',reserve:'Réservé',a_paraitre:'À paraître'}[s]||'À définir';
@@ -937,11 +960,14 @@ function renderWorkNotes(workId){
  if(!editor || !sb)return '';
 
  const notes=workNotes.filter(n=>n.work_id===workId);
- const authorIds=[...new Set(notes.map(n=>n.author_id).filter(Boolean))];
-
- // Keep the current editor visible even when they have not written a note yet.
  const currentId=window.currentUserId||null;
- if(currentId && !authorIds.includes(currentId))authorIds.push(currentId);
+
+ // Always show a block for every editor, even if there is no note yet.
+ const authorIds=[...new Set([
+   ...editorProfiles.map(p=>p.user_id),
+   ...notes.map(n=>n.author_id).filter(Boolean),
+   currentId
+ ].filter(Boolean))];
 
  const cards=authorIds.map(authorId=>{
    const note=notes.find(n=>n.author_id===authorId);
@@ -998,17 +1024,8 @@ async function saveWorkNote(workId){
    return;
  }
 
- const refreshed=await sb.from('work_notes').select('*');
- if(!refreshed.error){
-   workNotes=refreshed.data||[];
-   const ids=[...new Set(workNotes.map(n=>n.author_id).filter(Boolean))];
-   if(ids.length){
-     const pr=await sb.from('profiles').select('user_id,display_name').in('user_id',ids);
-     workNoteAuthorNames=Object.fromEntries(
-       (pr.data||[]).map(p=>[p.user_id,p.display_name||'Rédacteur'])
-     );
-   }
- }
+ await loadWorkNotes();
+ renderAll();
  if(status)status.textContent='Enregistré.';
 }
 function showWork(id){
@@ -1111,23 +1128,11 @@ function renderConstitution(){
 
    return `<div class="row">
      <div class="date">${w.first_publication_year||'—'}</div>
-     <div><button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button><br><span class="meta">${esc(authorNames(w.id))}</span>${editionMeta?`<br><span class="meta">${editionMeta}</span>`:''}</div>
+     <div><button class="work-link" onclick="openWork('${w.id}')">${esc(w.title)}</button><br><span class="meta">${esc(authorNames(w.id))}</span>${editionMeta?`<br><span class="meta">${editionMeta}</span>`:''}</div>
      <div class="right"><span class="status ${statusClass(finalStatus)}">${statusLabel(finalStatus)}</span></div>
    </div>`;
  }).join('');
 }
-function renderTimeline(){
- const sorted=[...works].sort((a,b)=>(a.first_publication_year||9999)-(b.first_publication_year||9999)||a.title.localeCompare(b.title,'fr'));
- $('#timeline').innerHTML=sorted.map(w=>`<div class="row">
-  <div class="date">${w.first_publication_year||'—'}</div>
-  <div>
-    <button class="timeline-link" onclick="openWorkFromTimeline('${w.id}')">${esc(w.title)}</button>
-    <br><span class="meta">${esc(authorNames(w.id))}</span>
-  </div>
-  <div class="right">${w.category==='hors_corpus_av'?'hors corpus':w.category==='sur_le_post_exotisme'?'sur le post-exotisme':''}</div>
- </div>`).join('');
-}
-
 function openIndexEntry(id){
  const entry=indexEntries.find(x=>x.id===id);
  if(!entry)return;
@@ -1140,7 +1145,7 @@ function openIndexEntry(id){
  document.getElementById('indexList')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function openWorkFromTimeline(id){
+function openWork(id){
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
  $('#ouvrages').classList.add('active');
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
@@ -1827,7 +1832,7 @@ function renderIndex(){
      </div>
      <div class="index-works">
        ${linkedWorks.length
-         ? linkedWorks.map(({row,work})=>`<div class="index-work-row"><button class="index-work-link" onclick="openWorkFromTimeline('${work.id}')">${esc(work.title)}</button>${row.page?` <span class="meta">p. ${esc(row.page)}</span>`:''}${editor?` <button class="index-edit-compact" onclick="openOccurrenceEditor('${row.id}')">Modifier</button>
+         ? linkedWorks.map(({row,work})=>`<div class="index-work-row"><button class="index-work-link" onclick="openWork('${work.id}')">${esc(work.title)}</button>${row.page?` <span class="meta">p. ${esc(row.page)}</span>`:''}${editor?` <button class="index-edit-compact" onclick="openOccurrenceEditor('${row.id}')">Modifier</button>
           <button class="index-remove" onclick="removeOccurrence('${row.id}')">Retirer</button>`:''}</div>`).join('')
          : '<span class="muted">Aucun ouvrage relié pour le moment.</span>'}
      </div>
@@ -2078,7 +2083,7 @@ $('#doLogin').onclick=async()=>{
  if(error){$('#loginError').style.display='block';$('#loginError').textContent=error.message;return;}
  $('#loginError').style.display='none';$('#loginModal').classList.remove('show');await checkEditor();
 };
-$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();window.currentUserId=null;editor=false;document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';await loadForum();};
+$('#logoutBtn').onclick=async()=>{await sb.auth.signOut();window.currentUserId=null;editor=false;workNotes=[];workNoteAuthorNames={};document.body.classList.remove('editor');$('#loginBtn').style.display='block';$('#logoutBtn').style.display='none';renderAll();await loadForum();};
 
 async function checkEditor(){
  if(!sb)return;
@@ -2090,6 +2095,8 @@ async function checkEditor(){
    editor=true;document.body.classList.add('editor');
    $('#editorName').textContent='Rédacteur : '+(profile.display_name||user.email);
    $('#loginBtn').style.display='none';$('#logoutBtn').style.display='block';
+   await loadWorkNotes();
+   renderAll();
  }
  await loadForum();
 }
