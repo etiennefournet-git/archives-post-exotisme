@@ -870,8 +870,7 @@ let chatMessages=[];
 let chatChannel=null;
 let chatPresenceChannel=null;
 let chatOtherOnline=false;
-let bookshopsMap=null, bookshopsLayer = L.markerClusterGroup({showCoverageOnHover:false, spiderfyOnMaxZoom:true, disableClusteringAtZoom:16, maxClusterRadius:45});
-bookshopsLayer.addTo(bookshopsMap);
+let bookshopsMap=null, bookshopsLayer=null;
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
@@ -2638,6 +2637,14 @@ async function syncBookshops(){
 function initBookshops(){
  if(bookshopsMap||!window.L)return;
  bookshopsMap=L.map('bookshopsMap').setView([48.8566,2.3522],13);
+  bookshopsLayer = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    spiderfyOnMaxZoom:true,
+    disableClusteringAtZoom:16,
+    maxClusterRadius:45
+  });
+  bookshopsLayer.addTo(bookshopsMap);
+
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(bookshopsMap);
  bookshopsLayer=L.layerGroup().addTo(bookshopsMap);
  $('#bookshopSearch').oninput=renderBookshops;
