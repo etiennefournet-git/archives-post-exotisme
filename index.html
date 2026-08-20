@@ -511,7 +511,31 @@ body.editor .chat-window.open{display:flex}
 .chat-dot.offline{background:var(--muted)!important}
 .chat-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-right:5px;vertical-align:1px}
 .chat-status-dot.online{background:#6f966d}
+
+/* --- Bouquinistes --- */
+.bookshops-toolbar{display:flex;gap:10px;margin:24px 0 14px;flex-wrap:wrap}
+.bookshops-toolbar input{flex:1;min-width:220px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:11px 13px;font:inherit}
+.bookshops-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.75fr);gap:14px}
+#bookshopsMap{height:620px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.bookshops-list{height:620px;border:1px solid var(--line);border-radius:12px;overflow:auto;background:var(--paper)}
+.bookshops-list-head{padding:15px 16px;border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:baseline}
+.bookshop-row{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.bookshop-row:hover{background:rgba(0,0,0,.025)}
+.bookshop-row h3{font-size:15px;margin:0 0 5px}
+.bookshop-row p{font-size:12px;line-height:1.45;color:var(--muted);margin:0}
+.bookshop-tag{display:inline-block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-top:8px;color:var(--muted)}
+.bookshop-empty{padding:22px 16px;color:var(--muted);font-size:13px}
+.map-credit{font-size:11px;color:var(--muted);margin-top:8px}
+.leaflet-container{font-family:inherit;background:#eee}
+.bookshop-popup h3{margin:0 0 5px;font-size:15px}
+.bookshop-popup p{margin:3px 0;font-size:12px;line-height:1.4}
+@media(max-width:850px){
+ .bookshops-layout{grid-template-columns:1fr}
+ #bookshopsMap{height:480px}.bookshops-list{height:360px}
+}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3Zl3hN3Q0Y0Y7R2n0mX0k7M8mZ0g=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 <div class="layout">
@@ -522,6 +546,7 @@ body.editor .chat-window.open{display:flex}
     <div class="navgroup">Collection</div>
     <button data-section="constitution">État de la collection</button>
     <button data-section="ouvrages">Ouvrages</button>
+     <button data-section="bouquinistes">Bouquinistes</button>
     <div class="navgroup">Index & archives</div>
     <button data-section="index">Index</button>
     <button data-section="archives">Archives</button>
@@ -587,6 +612,29 @@ body.editor .chat-window.open{display:flex}
   <div id="workDetail"></div>
 </section>
 
+
+<section id="bouquinistes" class="section">
+  <div class="sectionhead">
+    <div>
+      <div class="kicker">Cartographie</div>
+      <h2>Bouquinistes</h2>
+      <p class="sectionintro">Recenser, repérer et retrouver les librairies et bouquinistes où chercher des livres.</p>
+    </div>
+  </div>
+  <div class="bookshops-toolbar">
+    <input id="bookshopSearch" type="search" placeholder="Rechercher un bouquiniste…">
+    <button id="bookshopLocate" class="secondary">Rechercher dans la carte</button>
+    <button id="bookshopRefresh" class="secondary">Actualiser les données OSM</button>
+  </div>
+  <div class="bookshops-layout">
+    <div id="bookshopsMap"></div>
+    <aside class="bookshops-list">
+      <div class="bookshops-list-head"><strong id="bookshopCount">—</strong><span>établissements</span></div>
+      <div id="bookshopsResults"><div class="bookshop-empty">Déplace la carte puis lance une recherche.</div></div>
+    </aside>
+  </div>
+  <p class="map-credit">Données géographiques : OpenStreetMap · carte Leaflet. Les informations peuvent être incomplètes ou obsolètes.</p>
+</section>
 <section id="index" class="section">
   <div class="sectionhead"><div class="kicker" data-content="index_kicker">Index croisé</div><h2 data-content="index_title">Index</h2><p data-content="index_lead">Les entrées seront constituées pendant les lectures et reliées aux ouvrages, passages et archives.</p></div>
   <div class="tabs">
@@ -819,6 +867,9 @@ let chatMessages=[];
 let chatChannel=null;
 let chatPresenceChannel=null;
 let chatOtherOnline=false;
+let bookshopsMap=null;
+let bookshopsLayer=null;
+let bookshopsData=[];
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
@@ -1031,6 +1082,136 @@ function getOtherChatUserId(){
  const me=window.currentUserId;
  const other=(editorProfiles||[]).find(p=>p.user_id!==me);
  return other?.user_id||null;
+}
+
+
+const BOOKSHOP_OVERPASS='https://overpass-api.de/api/interpreter';
+
+function bookshopBounds(){
+ const b=bookshopsMap.getBounds();
+ return `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+}
+function bookshopEsc(s){return esc(String(s||''));}
+function bookshopPoint(o){
+ if(o.type==='node')return [o.lat,o.lon];
+ if(o.center)return [o.center.lat,o.center.lon];
+ return null;
+}
+function bookshopAddress(t){
+ return [t['addr:housenumber'],t['addr:street'],t['addr:postcode'],t['addr:city']].filter(Boolean).join(' ');
+}
+function renderBookshops(){
+ const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
+ const filtered=bookshopsData.filter(o=>{
+   const t=o.tags||{}, hay=[t.name,t['addr:street'],t['addr:city'],t['books'],t['shop']].filter(Boolean).join(' ').toLowerCase();
+   return !q||hay.includes(q);
+ });
+ $('#bookshopCount').textContent=filtered.length;
+ const list=$('#bookshopsResults');
+ if(!filtered.length){list.innerHTML='<div class="bookshop-empty">Aucun établissement trouvé.</div>';return;}
+ list.innerHTML=filtered.map(o=>{
+   const t=o.tags||{}, p=bookshopPoint(o);
+   return `<div class="bookshop-row" data-lat="${p?.[0]||''}" data-lon="${p?.[1]||''}">
+     <h3>${bookshopEsc(t.name||'Bouquiniste sans nom')}</h3>
+     <p>${bookshopEsc(bookshopAddress(t)||t['addr:full']||'Adresse non renseignée')}</p>
+     <span class="bookshop-tag">${bookshopEsc(t.second_hand==='only'?'seconde main':(t.books||'librairie'))}</span>
+   </div>`;
+ }).join('');
+ [...list.querySelectorAll('.bookshop-row')].forEach(el=>el.onclick=()=>{
+   const lat=Number(el.dataset.lat),lon=Number(el.dataset.lon);
+   if(Number.isFinite(lat)&&Number.isFinite(lon)){bookshopsMap.setView([lat,lon],17);}
+ });
+ if(bookshopsLayer)bookshopsLayer.clearLayers();
+ const bounds=[];
+ filtered.forEach(o=>{
+   const p=bookshopPoint(o); if(!p)return;
+   bounds.push(p);
+   const t=o.tags||{};
+   const m=L.marker(p).bindPopup(`<div class="bookshop-popup"><h3>${bookshopEsc(t.name||'Bouquiniste')}</h3><p>${bookshopEsc(bookshopAddress(t)||t['addr:full']||'Adresse non renseignée')}</p>${t.website?`<p>${bookshopEsc(t.website)}</p>`:''}</div>`);
+   m.addTo(bookshopsLayer);
+ });
+}
+
+
+async function fetchOSMBookshops(){
+ const q=`[out:json][timeout:30];(
+   nwr["shop"="books"](${bookshopBounds()});
+   nwr["shop"="second_hand"](${bookshopBounds()});
+ );out center tags;`;
+ const r=await fetch(BOOKSHOP_OVERPASS,{method:'POST',body:q});
+ if(!r.ok)throw new Error('Overpass HTTP '+r.status);
+ const data=await r.json();
+ return data.elements||[];
+}
+function osmBookshopRecord(o){
+ const t=o.tags||{}, p=bookshopPoint(o);
+ if(!p)return null;
+ return {
+   osm_type:o.type, osm_id:o.id,
+   name:t.name||'Bouquiniste sans nom',
+   address:bookshopAddress(t)||t['addr:full']||null,
+   postcode:t['addr:postcode']||null, city:t['addr:city']||null,
+   country:t['addr:country']||null,
+   latitude:p[0], longitude:p[1],
+   website:t.website||null, phone:t.phone||null,
+   osm_shop:t.shop||null, osm_tags:t,
+   osm_updated_at:new Date().toISOString()
+ };
+}
+function normalizeBookshopRow(r){
+ return {
+   type:r.osm_type||'node', id:r.osm_id||r.id,
+   lat:r.latitude, lon:r.longitude,
+   tags:{
+     name:r.name, website:r.website, phone:r.phone,
+     'addr:street':r.address, 'addr:postcode':r.postcode, 'addr:city':r.city
+   },
+   center:{lat:r.latitude,lon:r.longitude}, db:r
+ };
+}
+async function loadBookshopsFromSupabase(){
+ if(!sb)return [];
+ const q=editor ? sb.from('bookshops').select('*') : sb.from('bookshops_public').select('*');
+ const {data,error}=await q;
+ if(error)throw error;
+ return data||[];
+}
+async function syncBookshops(){
+ $('#bookshopCount').textContent='…';
+ $('#bookshopsResults').innerHTML='<div class="bookshop-empty">Recherche et synchronisation en cours…</div>';
+ try{
+   const osm=await fetchOSMBookshops();
+   const records=osm.map(osmBookshopRecord).filter(Boolean);
+   if(editor && records.length){
+     const {error}=await sb.from('bookshops').upsert(records,{onConflict:'osm_type,osm_id',ignoreDuplicates:false});
+     if(error)throw error;
+   }
+   bookshopsData=(await loadBookshopsFromSupabase()).map(normalizeBookshopRow);
+   renderBookshops();
+ }catch(e){
+   console.warn('Bouquinistes:',e);
+   try{
+     bookshopsData=(await loadBookshopsFromSupabase()).map(normalizeBookshopRow);
+     renderBookshops();
+     $('#bookshopsResults').insertAdjacentHTML('afterbegin','<div class="bookshop-empty">Données OSM non actualisées. Affichage des données déjà enregistrées.</div>');
+   }catch(e2){
+     $('#bookshopsResults').innerHTML='<div class="bookshop-empty">Impossible de récupérer les données pour le moment.</div>';
+     $('#bookshopCount').textContent='—';
+   }
+}
+
+function initBookshops(){
+ if(bookshopsMap||!window.L||!$('#bookshopsMap'))return;
+ bookshopsMap=L.map('bookshopsMap').setView([48.8566,2.3522],13);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+   maxZoom:19,attribution:'© OpenStreetMap contributors',referrerPolicy:'strict-origin-when-cross-origin'
+ }).addTo(bookshopsMap);
+ bookshopsLayer=L.layerGroup().addTo(bookshopsMap);
+ $('#bookshopRefresh').onclick=syncBookshops;
+ $('#bookshopLocate').onclick=syncBookshops;
+ $('#bookshopSearch').oninput=renderBookshops;
+ loadBookshopsFromSupabase().then(data=>{bookshopsData=data.map(normalizeBookshopRow);renderBookshops();}).catch(()=>{});
+ setTimeout(()=>bookshopsMap.invalidateSize(),100);
 }
 
 function formatChatTime(value){
@@ -2405,6 +2586,11 @@ setTimeout(loadForum,300);
   <div id="chatMessages" class="chat-messages"><div class="chat-empty">Chargement des messages…</div></div>
   <div class="chat-compose"><textarea id="chatInput" rows="1" placeholder="Écrire un message…"></textarea><button id="chatSend" aria-label="Envoyer">➤</button></div>
 </div>
-<script>initChatUI();</script>
+<script>initChatUI();
+document.querySelectorAll('button[data-section]').forEach(b=>b.addEventListener('click',()=>{
+ if(b.dataset.section==='bouquinistes')setTimeout(initBookshops,50);
+}));
+
+</script>
 </body>
 </html>
