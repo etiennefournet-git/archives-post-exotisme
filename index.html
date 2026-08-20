@@ -532,6 +532,8 @@ body.editor .chat-window.open{display:flex}
 .bookshop-visit-badge{display:inline-block;margin:5px 0;font-size:.78rem;opacity:.8}
 .bookshop-row.visit-visited{border-left:3px solid #5a9b69}
 .bookshop-row.visit-revisit{border-left:3px solid #c48b3c}
+
+.bookshop-shared-note{font-size:.76rem;opacity:.65;margin:6px 0}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -2288,23 +2290,59 @@ function bookshopRowsInMap(){
    return p && bounds.contains(p);
  });
 }
-const BOOKSHOP_VISIT_KEY='archives_bookshop_visits_v1';
-let bookshopVisits=JSON.parse(localStorage.getItem(BOOKSHOP_VISIT_KEY)||'{}');
 
-function saveBookshopVisits(){
- localStorage.setItem(BOOKSHOP_VISIT_KEY,JSON.stringify(bookshopVisits));
-}
+let bookshopVisits={};
+let bookshopVisitsLoaded=false;
+
 function visitKey(r){
  const d=r.db||{};
- return `${d.osm_type||r.type||'node'}:${d.osm_id||r.id||r.db?.id||''}`;
+ return `${d.osm_type||r.type||'node'}:${d.osm_id||r.id||d.id||''}`;
 }
 function getVisit(r){
- return bookshopVisits[visitKey(r)]||{status:'todo',date:'',rating:0,note:''};
+ return bookshopVisits[visitKey(r)]||{status:'todo',date:'',rating:0,note:'',author_id:null};
 }
-function setVisit(r,patch){
- const key=visitKey(r);
- bookshopVisits[key]={...getVisit(r),...patch};
- saveBookshopVisits();
+async function loadBookshopVisits(){
+ if(!editor){bookshopVisitsLoaded=true;return;}
+ const {data,error}=await sb.from('bookshop_visits')
+   .select('osm_type,osm_id,author_id,status,visit_date,rating,note,updated_at');
+ if(error) throw new Error(`Visites Supabase : ${error.message}`);
+ bookshopVisits={};
+ (data||[]).forEach(v=>{
+   const k=`${v.osm_type}:${v.osm_id}`;
+   // Keep the most recently updated note when both editors have notes.
+   const prev=bookshopVisits[k];
+   if(!prev || new Date(v.updated_at)>new Date(prev.updated_at)){
+     bookshopVisits[k]={
+       status:v.status,date:v.visit_date||'',rating:v.rating||0,note:v.note||'',
+       author_id:v.author_id,updated_at:v.updated_at
+     };
+   }
+ });
+ bookshopVisitsLoaded=true;
+}
+async function setVisit(r,patch){
+ if(!editor)return;
+ const key=visitKey(r), parts=key.split(':');
+ const author_id=window.currentUserId;
+ if(!author_id) throw new Error('Utilisateur non authentifié.');
+ const payload={
+   osm_type:parts[0],
+   osm_id:Number(parts[1]),
+   author_id,
+   status:patch.status,
+   visit_date:patch.date||null,
+   rating:+patch.rating||0,
+   note:patch.note||''
+ };
+ const {data,error}=await sb.from('bookshop_visits').upsert(payload,{
+   onConflict:'osm_type,osm_id,author_id'
+ }).select().single();
+ if(error) throw new Error(`Enregistrement de la visite : ${error.message}`);
+ bookshopVisits[key]={
+   status:data.status,date:data.visit_date||'',rating:data.rating||0,note:data.note||'',
+   author_id:data.author_id,updated_at:data.updated_at
+ };
+ return data;
 }
 function visitLabel(status){
  return status==='visited'?'Visité':status==='revisit'?'À revoir':'À visiter';
@@ -2329,56 +2367,24 @@ function visitControls(r){
  </div>`;
 }
 function bindVisitControls(list){
- list.querySelectorAll('.bookshop-save-visit').forEach(btn=>btn.onclick=()=>{
+ list.querySelectorAll('.bookshop-save-visit').forEach(btn=>btn.onclick=async e=>{
+   e.stopPropagation();
    const box=btn.closest('.bookshop-visit'),key=box.dataset.key;
    const r=bookshopsData.find(x=>visitKey(x)===key);
    if(!r)return;
-   setVisit(r,{
-     status:box.querySelector('.bookshop-visit-status').value,
-     date:box.querySelector('.bookshop-visit-date').value,
-     rating:+box.querySelector('.bookshop-visit-rating').value,
-     note:box.querySelector('.bookshop-visit-note').value.trim()
-   });
-   renderBookshops();
-   renderBookshopMarkers();
- });
-}
-
-function renderBookshopMarkers(){
- if(!bookshopsLayer)return;
- bookshopsLayer.clearLayers();
- const bounds=bookshopsMap.getBounds();
- const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
- const typeFilter=$('#bookshopTypeFilter')?.value||'used';
- const visitFilter=$('#bookshopVisitFilter')?.value||'all';
-
- bookshopsData.forEach(r=>{
-   const p=bookshopPoint(r),t=r.tags||{};
-   if(!p || !bounds.contains(p))return;
-   if(typeFilter==='used' && !isUsedBookshop(r))return;
-
-   const v=getVisit(r);
-   if(visitFilter!=='all' && v.status!==visitFilter)return;
-
-   const hay=[t.name,t['addr:street'],t['addr:city'],t.books,t.second_hand]
-     .filter(Boolean).join(' ').toLowerCase();
-   if(q && !hay.includes(q))return;
-
-   const details=[
-     t.second_hand&&`Occasion : ${t.second_hand}`,
-     t.books&&`Types : ${t.books}`,
-     t.opening_hours&&`Horaires : ${t.opening_hours}`
-   ].filter(Boolean);
-
-   const status=`${visitLabel(v.status)}${v.date?' · '+v.date:''}${v.rating?' · '+'★'.repeat(v.rating):''}`;
-   const note=v.note?`<br><br><em>${esc(v.note)}</em>`:'';
-   const popup=`<strong>${esc(t.name||'Bouquiniste')}</strong><br>`+
-     `${esc(bookshopAddress(t)||'Adresse non renseignée')}<br>`+
-     `<small>${esc(bookshopType(t))}</small><br>`+
-     `<small>${esc(status)}</small>`+
-     (details.length?'<br><br>'+details.map(esc).join('<br>'):'')+note;
-
-   L.marker(p).bindPopup(popup).addTo(bookshopsLayer);
+   btn.disabled=true;
+   try{
+     await setVisit(r,{
+       status:box.querySelector('.bookshop-visit-status').value,
+       date:box.querySelector('.bookshop-visit-date').value,
+       rating:+box.querySelector('.bookshop-visit-rating').value,
+       note:box.querySelector('.bookshop-visit-note').value.trim()
+     });
+     renderBookshops();
+   }catch(err){
+     console.error(err);
+     alert(err.message);
+   }finally{btn.disabled=false;}
  });
 }
 
@@ -2530,6 +2536,7 @@ async function syncBookshops(){
      if(error) throw new Error(`Supabase : ${error.message}`);
    }
    await loadBookshops();
+   if(editor && !bookshopVisitsLoaded) await loadBookshopVisits();
    const cityLabel=city?` pour ${city}`:' dans la zone';
    const visibleCount=bookshopRowsInMap().filter(isUsedBookshop).length;
    $('#bookshopsResults').insertAdjacentHTML('afterbegin',
