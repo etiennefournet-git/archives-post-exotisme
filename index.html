@@ -2491,7 +2491,6 @@ async function syncBookshops(){
        osm_type:o.type, osm_id:o.id,
        name:t.name||'Bouquiniste sans nom',
        address:bookshopAddress(t)||null,
-       address_source:bookshopAddress(t)?'osm':null,
        postcode:t['addr:postcode']||null, city:t['addr:city']||t['addr:town']||t['addr:village']||null,
        country:t['addr:country']||null,
        latitude:p[0],longitude:p[1],
