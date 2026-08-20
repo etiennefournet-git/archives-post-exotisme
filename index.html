@@ -2614,11 +2614,23 @@ async function syncBookshops(){
 
    await enrichBookshopAddresses(records);
 
-   if(editor && records.length){
+   // Afficher immédiatement les résultats OSM, même si Supabase échoue.
+   bookshopsData = records;
+   renderBookshops();
+
+   if(editor && records.length && sb){
      const {error}=await sb.from('bookshops').upsert(records,{onConflict:'osm_type,osm_id'});
-     if(error) throw new Error(`Supabase : ${error.message}`);
+     if(error) console.warn('Supabase bookshops:', error.message);
    }
-   await loadBookshops();
+
+   // Recharger depuis Supabase uniquement si la persistance a réussi.
+   if(editor && records.length){
+     try { await loadBookshops(); } catch(e) {
+       console.warn('Impossible de recharger les bouquinistes depuis Supabase:', e);
+       bookshopsData = records;
+       renderBookshops();
+     }
+   }
    if(editor && !bookshopVisitsLoaded) await loadBookshopVisits();
    const cityLabel=city?` pour ${city}`:' dans la zone';
    const visibleCount=bookshopRowsInMap().filter(isUsedBookshop).length;
@@ -2637,21 +2649,33 @@ async function syncBookshops(){
 function initBookshops(){
  if(bookshopsMap||!window.L)return;
  bookshopsMap=L.map('bookshopsMap').setView([48.8566,2.3522],13);
-  bookshopsLayer = L.markerClusterGroup({
-    showCoverageOnHover:false,
-    spiderfyOnMaxZoom:true,
-    disableClusteringAtZoom:16,
-    maxClusterRadius:45
-  });
+  if (typeof L.markerClusterGroup === 'function') {
+    bookshopsLayer = L.markerClusterGroup({
+      showCoverageOnHover:false,
+      spiderfyOnMaxZoom:true,
+      disableClusteringAtZoom:16,
+      maxClusterRadius:45
+    });
+  } else {
+    bookshopsLayer = L.layerGroup();
+  }
   bookshopsLayer.addTo(bookshopsMap);
 
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(bookshopsMap);
- bookshopsLayer=L.layerGroup().addTo(bookshopsMap);
+ /* cluster layer already initialized above */
  $('#bookshopSearch').oninput=renderBookshops;
 $('#bookshopVisitFilter').onchange=renderBookshops;
 $('#bookshopTypeFilter').onchange=renderBookshops;
-bookshopsMap.on('moveend',renderBookshops);$('#bookshopTypeFilter').onchange=renderBookshops;$('#bookshopRefresh').onclick=syncBookshops;$('#bookshopLocate').onclick=syncBookshops;$('#bookshopCity').onkeydown=e=>{if(e.key==='Enter')syncBookshops();};
- loadBookshops().catch(e=>console.warn(e));
+bookshopsMap.on('moveend',renderBookshops);$('#bookshopRefresh').onclick=syncBookshops;$('#bookshopLocate').onclick=syncBookshops;$('#bookshopCity').onkeydown=e=>{if(e.key==='Enter')syncBookshops();};
+ Promise.resolve()
+   .then(()=>loadBookshops())
+   .then(async()=>{
+     if(editor && !bookshopVisitsLoaded) {
+       try { await loadBookshopVisits(); } catch(e) { console.warn('Visites:',e); }
+     }
+     renderBookshops();
+   })
+   .catch(e=>console.warn('Bouquinistes:',e));
  setTimeout(()=>bookshopsMap.invalidateSize(),100);
 }
 
