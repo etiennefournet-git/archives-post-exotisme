@@ -540,6 +540,24 @@ body.editor .chat-window.open{display:flex}
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<style>
+.bookshop-popup{min-width:220px;max-width:300px;font-size:13px;line-height:1.4}
+.bookshop-popup-title{font-size:16px;font-weight:700;margin-bottom:5px}
+.bookshop-popup-address{margin-bottom:4px}
+.bookshop-popup-type,.bookshop-popup-status{font-size:12px;opacity:.8}
+.bookshop-popup-details{margin-top:9px;padding-top:8px;border-top:1px solid #ddd}
+.bookshop-popup-note{margin-top:9px;padding-top:8px;border-top:1px solid #ddd;font-style:italic}
+.bookshop-popup-actions{margin-top:10px}
+.bookshop-popup-route{border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+</style>
+
+<style>
+.bookshop-popup-actions{position:relative}
+.bookshop-nav-menu{display:flex;flex-direction:column;gap:3px;margin-top:5px;padding:6px;border:1px solid #ddd;border-radius:6px;background:#fff}
+.bookshop-nav-menu a{text-decoration:none;padding:4px 6px;border-radius:4px}
+.bookshop-nav-menu a:hover{background:#f0f0f0}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -2414,25 +2432,68 @@ function renderBookshopMarkers(){
    ].filter(Boolean).join(' ').toLowerCase();
 
    if(q && !hay.includes(q))return;
+    const details=[
+      t.second_hand&&`Occasion : ${t.second_hand}`,
+      t.books&&`Types : ${t.books}`,
+      t.opening_hours&&`Horaires : ${t.opening_hours}`
+    ].filter(Boolean);
 
-   const details=[
-     t.second_hand&&`Occasion : ${t.second_hand}`,
-     t.books&&`Types : ${t.books}`,
-     t.opening_hours&&`Horaires : ${t.opening_hours}`
-   ].filter(Boolean);
+    const statusText=`${visitLabel(v.status)}${v.date?' · '+v.date:''}${v.rating?' · '+'★'.repeat(v.rating):''}`;
+    const note=v.note?`<div class="bookshop-popup-note">${esc(v.note)}</div>`:'';
+    const address=bookshopAddress(t)||'Adresse non renseignée';
+    const lat=p[0], lon=p[1];
+    const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat+','+lon)}`;
 
-   const status=`${visitLabel(v.status)}${v.date?' · '+v.date:''}${v.rating?' · '+'★'.repeat(v.rating):''}`;
-   const note=v.note?`<br><br><em>${esc(v.note)}</em>`:'';
+    const popup=`
+      <div class="bookshop-popup">
+        <div class="bookshop-popup-title">${esc(t.name||'Bouquiniste')}</div>
+        <div class="bookshop-popup-address">${esc(address)}</div>
+        <div class="bookshop-popup-type">${esc(bookshopType(t))}</div>
+        <div class="bookshop-popup-status">${esc(statusText)}</div>
+        ${details.length?`<div class="bookshop-popup-details">${details.map(esc).join('<br>')}</div>`:''}
+        ${note}
+        <div class="bookshop-popup-actions">
+          <button type="button" class="bookshop-popup-route" data-lat="${lat}" data-lon="${lon}">Itinéraire</button>
+          <div class="bookshop-nav-menu" hidden>
+            <a href="#" data-nav="apple">Apple Plans</a>
+            <a href="#" data-nav="google">Google Maps</a>
+            <a href="#" data-nav="osm">OpenStreetMap</a>
+            <a href="#" data-nav="waze">Waze</a>
+            <a href="#" data-nav="here">HERE WeGo</a>
+          </div>
+        </div>
+      </div>`;
 
-   const popup=
-     `<strong>${esc(t.name||'Bouquiniste')}</strong><br>`+
-     `${esc(bookshopAddress(t)||'Adresse non renseignée')}<br>`+
-     `<small>${esc(bookshopType(t))}</small><br>`+
-     `<small>${esc(status)}</small>`+
-     (details.length?'<br><br>'+details.map(esc).join('<br>'):'')+
-     note;
-
-   L.marker(p).bindPopup(popup).addTo(bookshopsLayer);
+    const marker=L.marker(p);
+    marker.bindPopup(popup);
+    marker.on('popupopen',()=>{
+      const popupEl=marker.getPopup()?.getElement();
+      const btn=popupEl?.querySelector('.bookshop-popup-route');
+      const menu=popupEl?.querySelector('.bookshop-nav-menu');
+      if(btn && menu){
+        btn.onclick=()=>{
+          menu.hidden=!menu.hidden;
+        };
+        menu.querySelectorAll('[data-nav]').forEach(link=>{
+          link.onclick=(ev)=>{
+            ev.preventDefault();
+            const lat=btn.dataset.lat;
+            const lon=btn.dataset.lon;
+            const dest=encodeURIComponent(`${lat},${lon}`);
+            const urls={
+              apple:`http://maps.apple.com/?daddr=${dest}`,
+              google:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,
+              osm:`https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=~${lat},${lon}`,
+              waze:`https://www.waze.com/ul?ll=${lat}%2C${lon}&navigate=yes`,
+              here:`https://wego.here.com/directions/mix/${lat},${lon}`
+            };
+            window.open(urls[link.dataset.nav],'_blank','noopener');
+            menu.hidden=true;
+          };
+        });
+      };
+    });
+    marker.addTo(bookshopsLayer);
  });
 }
 
