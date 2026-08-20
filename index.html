@@ -537,6 +537,9 @@ body.editor .chat-window.open{display:flex}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -867,7 +870,8 @@ let chatMessages=[];
 let chatChannel=null;
 let chatPresenceChannel=null;
 let chatOtherOnline=false;
-let bookshopsMap=null, bookshopsLayer=null, bookshopsData=[];
+let bookshopsMap=null, bookshopsLayer = L.markerClusterGroup({showCoverageOnHover:false, spiderfyOnMaxZoom:true, disableClusteringAtZoom:16, maxClusterRadius:45});
+bookshopsLayer.addTo(bookshopsMap);
 let editorProfiles=[];
 let workNoteAuthorNames={};
 let editor=false;
