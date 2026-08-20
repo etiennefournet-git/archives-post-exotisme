@@ -591,10 +591,57 @@ function toggleBookshopFavorite(r){
 
 <style>
 .chat-launcher{position:relative}
-.chat-unread-badge{display:none;position:absolute;top:-5px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#b33a32;color:#fff;font:700 11px/19px system-ui,sans-serif;text-align:center;box-sizing:border-box}
+.chat-unread-badge{
+  display:none;
+  position:absolute;
+  top:-5px;
+  right:-3px;
+  min-width:19px;
+  height:19px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#b33a32;
+  color:#fff;
+  font:700 11px/19px system-ui,sans-serif;
+  text-align:center;
+  box-sizing:border-box;
+}
 .chat-launcher.has-unread{padding-right:20px}
 .chat-launcher.has-unread .chat-unread-badge{display:block}
 </style>
+
+<style id="chat-bottom-right-fix">
+#chatLauncher{
+  position:fixed !important;
+  right:24px !important;
+  bottom:24px !important;
+  left:auto !important;
+  top:auto !important;
+  z-index:10000 !important;
+}
+#chatWindow{
+  position:fixed !important;
+  right:24px !important;
+  bottom:82px !important;
+  left:auto !important;
+  top:auto !important;
+  z-index:9999 !important;
+}
+</style>
+
+<script id="index-count-fix">
+function refreshIndexCount(){
+  const candidates=[
+    window.indexEntries,
+    typeof indexEntries!=='undefined'?indexEntries:null
+  ];
+  const entries=candidates.find(v=>Array.isArray(v))||[];
+  const count=entries.length;
+  const els=document.querySelectorAll('#homeIndex,.home-index-count,[data-index-count]');
+  els.forEach(el=>el.textContent=String(count));
+  if(typeof window.homeIndex==='number') window.homeIndex=count;
+}
+</script>
 </head>
 <body>
 <div class="layout">
@@ -1178,7 +1225,6 @@ function renderChat(){
    return `<div class="chat-message ${mine?'mine':''}"><div class="chat-author">${esc(name)}</div><div class="chat-bubble">${esc(m.body).replace(/\n/g,'<br>')}</div><div class="chat-time">${formatChatTime(m.created_at)}</div></div>`;
  }).join('');
  box.scrollTop=box.scrollHeight;
- recomputeChatUnread();
 }
 async function loadChat(){
  if(!sb || !editor || !window.currentUserId)return;
@@ -1190,9 +1236,9 @@ async function loadChat(){
    if(payload.new && !chatMessages.some(m=>m.id===payload.new.id)){
      chatMessages.push(payload.new);
      chatMessages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-     const chatIsOpen=$('#chatWindow')?.classList.contains('open');
      renderChat();
-     if(chatIsOpen) markChatAsRead();
+     const chatIsOpen=$('#chatWindow')?.classList.contains('open');
+     if(chatIsOpen) markChatAsRead(); else recomputeChatUnread();
    }
  }).subscribe(status=>{if(status==='SUBSCRIBED')$('#chatStatus').textContent='Privé · en direct';});
 }
@@ -3007,5 +3053,10 @@ setTimeout(loadForum,300);
   <div class="chat-compose"><textarea id="chatInput" rows="1" placeholder="Écrire un message…"></textarea><button id="chatSend" aria-label="Envoyer">➤</button></div>
 </div>
 <script>initChatUI();</script>
+
+<script>
+window.addEventListener('load',()=>setTimeout(refreshIndexCount,250));
+document.addEventListener('index:updated',refreshIndexCount);
+</script>
 </body>
 </html>
