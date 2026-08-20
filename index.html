@@ -588,6 +588,13 @@ function toggleBookshopFavorite(r){
 <style>
 .bookshop-popup-favorite{display:block;margin-top:7px;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
 </style>
+
+<style>
+.chat-launcher{position:relative}
+.chat-unread-badge{display:none;position:absolute;top:-5px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#b33a32;color:#fff;font:700 11px/19px system-ui,sans-serif;text-align:center;box-sizing:border-box}
+.chat-launcher.has-unread{padding-right:20px}
+.chat-launcher.has-unread .chat-unread-badge{display:block}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -914,7 +921,7 @@ let works=[], authors=[], editions=[], copies=[], indexEntries=[], occurrences=[
 let forumMessages=[];
 let workNotes=[];
 let editMode=false;
-let chatMessages=[];
+let chatMessages=[]; let chatUnreadCount=0; let chatLastReadAt=localStorage.getItem('private_chat_last_read_at')||'';
 let chatChannel=null;
 let chatPresenceChannel=null;
 let chatOtherOnline=false;
@@ -1137,6 +1144,30 @@ function formatChatTime(value){
  const d=new Date(value);
  return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 }
+
+function updateChatUnreadBadge(){
+ const badge=$('#chatUnreadBadge'), launcher=$('#chatLauncher');
+ if(!badge||!launcher)return;
+ badge.textContent=chatUnreadCount>99?'99+':String(chatUnreadCount);
+ launcher.classList.toggle('has-unread',chatUnreadCount>0);
+}
+function recomputeChatUnread(){
+ const last=chatLastReadAt?new Date(chatLastReadAt).getTime():0;
+ chatUnreadCount=chatMessages.filter(m=>{
+   if(!window.currentUserId || m.author_id===window.currentUserId)return false;
+   const t=new Date(m.created_at).getTime();
+   return Number.isFinite(t) && t>last;
+ }).length;
+ updateChatUnreadBadge();
+}
+function markChatAsRead(){
+ const latest=chatMessages[chatMessages.length-1];
+ if(!latest)return;
+ chatLastReadAt=latest.created_at;
+ localStorage.setItem('private_chat_last_read_at',chatLastReadAt);
+ chatUnreadCount=0;
+ updateChatUnreadBadge();
+}
 function renderChat(){
  const box=$('#chatMessages'); if(!box)return;
  if(!chatMessages.length){box.innerHTML='<div class="chat-empty">Aucun message pour le moment.</div>';return;}
@@ -1147,15 +1178,22 @@ function renderChat(){
    return `<div class="chat-message ${mine?'mine':''}"><div class="chat-author">${esc(name)}</div><div class="chat-bubble">${esc(m.body).replace(/\n/g,'<br>')}</div><div class="chat-time">${formatChatTime(m.created_at)}</div></div>`;
  }).join('');
  box.scrollTop=box.scrollHeight;
+ recomputeChatUnread();
 }
 async function loadChat(){
  if(!sb || !editor || !window.currentUserId)return;
  const result=await sb.from('chat_messages').select('id,author_id,body,created_at').order('created_at',{ascending:true});
  if(result.error){console.warn('Chat non disponible :',result.error.message);$('#chatStatus').textContent='Chat indisponible';chatMessages=[];renderChat();return;}
- chatMessages=result.data||[];renderChat();updateChatPresenceState();setupChatPresence();
+ chatMessages=result.data||[];renderChat();recomputeChatUnread();updateChatPresenceState();setupChatPresence();
  if(chatChannel)sb.removeChannel(chatChannel);
  chatChannel=sb.channel('private-chat-messages').on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},payload=>{
-   if(payload.new && !chatMessages.some(m=>m.id===payload.new.id)){chatMessages.push(payload.new);chatMessages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));renderChat();}
+   if(payload.new && !chatMessages.some(m=>m.id===payload.new.id)){
+     chatMessages.push(payload.new);
+     chatMessages.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+     const chatIsOpen=$('#chatWindow')?.classList.contains('open');
+     renderChat();
+     if(chatIsOpen) markChatAsRead();
+   }
  }).subscribe(status=>{if(status==='SUBSCRIBED')$('#chatStatus').textContent='Privé · en direct';});
 }
 async function sendChat(){
@@ -1170,7 +1208,12 @@ async function sendChat(){
 function initChatUI(){
  const launcher=$('#chatLauncher'),win=$('#chatWindow'),close=$('#chatClose'),send=$('#chatSend'),input=$('#chatInput');
  if(!launcher||!win)return;
- launcher.onclick=()=>{win.classList.add('open');renderChat();setTimeout(()=>input?.focus(),50)};
+ launcher.onclick=()=>{
+   win.classList.add('open');
+   renderChat();
+   markChatAsRead();
+   setTimeout(()=>input?.focus(),50);
+ };
  close.onclick=()=>win.classList.remove('open');send.onclick=sendChat;
  input?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
 }
@@ -2957,7 +3000,7 @@ loadData();
 setTimeout(loadForum,300);
 </script>
 
-<button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span><span id="chatLauncherLabel">Chat avec l’autre rédacteur</span></button>
+<button id="chatLauncher" class="chat-launcher" aria-label="Ouvrir le chat"><span class="chat-dot"></span><span id="chatLauncherLabel">Chat avec l’autre rédacteur</span><span id="chatUnreadBadge" class="chat-unread-badge" aria-label="Messages non lus">0</span></button>
 <div id="chatWindow" class="chat-window" aria-label="Chat privé">
   <div class="chat-head"><div><h3 id="chatTitle">Chat avec l’autre rédacteur</h3><div id="chatStatus" class="chat-status">Connexion…</div></div><button id="chatClose" class="chat-close" aria-label="Fermer">×</button></div>
   <div id="chatMessages" class="chat-messages"><div class="chat-empty">Chargement des messages…</div></div>
