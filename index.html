@@ -2388,6 +2388,51 @@ function bindVisitControls(list){
  });
 }
 
+function renderBookshopMarkers(){
+ if(!bookshopsLayer || !bookshopsMap)return;
+ bookshopsLayer.clearLayers();
+
+ const bounds=bookshopsMap.getBounds();
+ const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
+ const typeFilter=$('#bookshopTypeFilter')?.value||'used';
+ const visitFilter=$('#bookshopVisitFilter')?.value||'all';
+
+ bookshopsData.forEach(r=>{
+   const p=bookshopPoint(r),t=r.tags||{};
+   if(!p || !bounds.contains(p))return;
+
+   if(typeFilter==='used' && !isUsedBookshop(r))return;
+
+   const v=getVisit(r);
+   if(visitFilter!=='all' && v.status!==visitFilter)return;
+
+   const hay=[
+     t.name,t['addr:street'],t['addr:city'],t.books,t.second_hand
+   ].filter(Boolean).join(' ').toLowerCase();
+
+   if(q && !hay.includes(q))return;
+
+   const details=[
+     t.second_hand&&`Occasion : ${t.second_hand}`,
+     t.books&&`Types : ${t.books}`,
+     t.opening_hours&&`Horaires : ${t.opening_hours}`
+   ].filter(Boolean);
+
+   const status=`${visitLabel(v.status)}${v.date?' · '+v.date:''}${v.rating?' · '+'★'.repeat(v.rating):''}`;
+   const note=v.note?`<br><br><em>${esc(v.note)}</em>`:'';
+
+   const popup=
+     `<strong>${esc(t.name||'Bouquiniste')}</strong><br>`+
+     `${esc(bookshopAddress(t)||'Adresse non renseignée')}<br>`+
+     `<small>${esc(bookshopType(t))}</small><br>`+
+     `<small>${esc(status)}</small>`+
+     (details.length?'<br><br>'+details.map(esc).join('<br>'):'')+
+     note;
+
+   L.marker(p).bindPopup(popup).addTo(bookshopsLayer);
+ });
+}
+
 function renderBookshops(){
  const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
  const filter=$('#bookshopTypeFilter')?.value||'used';
