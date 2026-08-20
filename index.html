@@ -2252,7 +2252,9 @@ function bookshopPoint(o){
  return o.type==='node'?[o.lat,o.lon]:o.center?[o.center.lat,o.center.lon]:null;
 }
 function bookshopAddress(t){
- return [t['addr:housenumber'],t['addr:street'],t['addr:postcode'],t['addr:city']].filter(Boolean).join(' ');
+ if(t['addr:full']) return t['addr:full'];
+ const street=[t['addr:housenumber'],t['addr:street']].filter(Boolean).join(' ');
+ return [street,t['addr:postcode'],t['addr:city'],t['addr:suburb']||t['addr:district']].filter(Boolean).join(', ');
 }
 function bookshopType(t){
  if(t.second_hand==='only') return 'Bouquiniste · seconde main';
@@ -2292,7 +2294,12 @@ function renderBookshops(){
 function dbToMap(r){
  return {type:r.osm_type||'node',id:r.osm_id||r.id,lat:r.latitude,lon:r.longitude,
    center:{lat:r.latitude,lon:r.longitude},
-   tags:{name:r.name,'addr:street':r.address,'addr:postcode':r.postcode,'addr:city':r.city,
+   tags:{name:r.name,'addr:full':r.osm_tags?.['addr:full']||'',
+     'addr:housenumber':r.osm_tags?.['addr:housenumber']||'',
+     'addr:street':r.osm_tags?.['addr:street']||r.address||'',
+     'addr:postcode':r.postcode||r.osm_tags?.['addr:postcode']||'',
+     'addr:city':r.city||r.osm_tags?.['addr:city']||'',
+     'addr:suburb':r.osm_tags?.['addr:suburb']||r.osm_tags?.['addr:district']||'',
      website:r.website,phone:r.phone,books:r.osm_tags?.books||'',
      second_hand:r.osm_tags?.second_hand||'',opening_hours:r.osm_tags?.opening_hours||'',
      shop:r.osm_shop||'books'},db:r};
@@ -2363,8 +2370,8 @@ async function syncBookshops(){
      return {
        osm_type:o.type, osm_id:o.id,
        name:t.name||'Bouquiniste sans nom',
-       address:bookshopAddress(t)||t['addr:full']||null,
-       postcode:t['addr:postcode']||null, city:t['addr:city']||null,
+       address:bookshopAddress(t)||null,
+       postcode:t['addr:postcode']||null, city:t['addr:city']||t['addr:town']||t['addr:village']||null,
        country:t['addr:country']||null,
        latitude:p[0],longitude:p[1],
        website:t.website||t['contact:website']||null,
