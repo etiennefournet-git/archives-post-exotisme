@@ -525,6 +525,13 @@ body.editor .chat-window.open{display:flex}
 .bookshop-empty{padding:22px 16px;color:var(--muted);font-size:13px}
 .map-credit{font-size:11px;color:var(--muted);margin-top:8px}
 @media(max-width:850px){.bookshops-layout{grid-template-columns:1fr}#bookshopsMap{height:480px}.bookshops-list{height:360px}}
+
+.bookshop-visit{margin-top:8px;padding:8px;border-top:1px solid var(--line);display:grid;gap:6px}
+.bookshop-visit select,.bookshop-visit input,.bookshop-visit textarea{width:100%;box-sizing:border-box}
+.bookshop-visit textarea{resize:vertical}
+.bookshop-visit-badge{display:inline-block;margin:5px 0;font-size:.78rem;opacity:.8}
+.bookshop-row.visit-visited{border-left:3px solid #5a9b69}
+.bookshop-row.visit-revisit{border-left:3px solid #c48b3c}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -613,7 +620,7 @@ body.editor .chat-window.open{display:flex}
   <div class="bookshops-toolbar">
     <input id="bookshopSearch" type="search" placeholder="Filtrer les résultats…">
     <input id="bookshopCity" type="search" placeholder="Ville (ex. Paris)">
-    <select id="bookshopTypeFilter" aria-label="Type de commerce"><option value="used" selected>Librairies d’occasion / bouquinistes</option><option value="all">Toutes les librairies OSM</option></select>
+    <select id="bookshopTypeFilter" aria-label="Type de commerce"><option value="used" selected>Librairies d’occasion / bouquinistes</option><option value="all">Toutes les librairies OSM</option></select><select id="bookshopVisitFilter" aria-label="État de visite"><option value="all">Toutes les visites</option><option value="todo">À visiter</option><option value="visited">Visités</option><option value="revisit">À revoir</option></select>
     <button id="bookshopLocate" class="secondary">Rechercher dans la carte</button>
     <button id="bookshopRefresh" class="secondary">Actualiser les données OSM</button>
   </div>
@@ -2245,6 +2252,8 @@ function renderArchives(){
 const BOOKSHOP_OVERPASS='https://overpass-api.de/api/interpreter';
 const BOOKSHOP_OVERPASS_FALLBACK='https://overpass.kumi.systems/api/interpreter';
 const BOOKSHOP_NOMINATIM='https://nominatim.openstreetmap.org/search';
+const BOOKSHOP_REVERSE='https://nominatim.openstreetmap.org/reverse';
+const bookshopAddressCache=new Map();
 
 function bookshopBounds(){
  const b=bookshopsMap.getBounds();
@@ -2279,12 +2288,87 @@ function bookshopRowsInMap(){
    return p && bounds.contains(p);
  });
 }
+const BOOKSHOP_VISIT_KEY='archives_bookshop_visits_v1';
+let bookshopVisits=JSON.parse(localStorage.getItem(BOOKSHOP_VISIT_KEY)||'{}');
+
+function saveBookshopVisits(){
+ localStorage.setItem(BOOKSHOP_VISIT_KEY,JSON.stringify(bookshopVisits));
+}
+function visitKey(r){
+ const d=r.db||{};
+ return `${d.osm_type||r.type||'node'}:${d.osm_id||r.id||r.db?.id||''}`;
+}
+function getVisit(r){
+ return bookshopVisits[visitKey(r)]||{status:'todo',date:'',rating:0,note:''};
+}
+function setVisit(r,patch){
+ const key=visitKey(r);
+ bookshopVisits[key]={...getVisit(r),...patch};
+ saveBookshopVisits();
+}
+function visitLabel(status){
+ return status==='visited'?'Visité':status==='revisit'?'À revoir':'À visiter';
+}
+function visitClass(status){
+ return status==='visited'?'visited':status==='revisit'?'revisit':'todo';
+}
+function visitControls(r){
+ const v=getVisit(r),k=visitKey(r);
+ return `<div class="bookshop-visit" data-key="${esc(k)}">
+   <select class="bookshop-visit-status" data-key="${esc(k)}">
+     <option value="todo"${v.status==='todo'?' selected':''}>À visiter</option>
+     <option value="visited"${v.status==='visited'?' selected':''}>Visité</option>
+     <option value="revisit"${v.status==='revisit'?' selected':''}>À revoir</option>
+   </select>
+   <input class="bookshop-visit-date" type="date" value="${esc(v.date||'')}" aria-label="Date de visite">
+   <select class="bookshop-visit-rating" aria-label="Intérêt">
+     ${[0,1,2,3,4,5].map(n=>`<option value="${n}"${+v.rating===n?' selected':''}>${n?('★'.repeat(n)):'—'}</option>`).join('')}
+   </select>
+   <textarea class="bookshop-visit-note" rows="2" placeholder="Note de visite…">${esc(v.note||'')}</textarea>
+   <button type="button" class="secondary bookshop-save-visit">Enregistrer</button>
+ </div>`;
+}
+function bindVisitControls(list){
+ list.querySelectorAll('.bookshop-save-visit').forEach(btn=>btn.onclick=()=>{
+   const box=btn.closest('.bookshop-visit'),key=box.dataset.key;
+   const r=bookshopsData.find(x=>visitKey(x)===key);
+   if(!r)return;
+   setVisit(r,{
+     status:box.querySelector('.bookshop-visit-status').value,
+     date:box.querySelector('.bookshop-visit-date').value,
+     rating:+box.querySelector('.bookshop-visit-rating').value,
+     note:box.querySelector('.bookshop-visit-note').value.trim()
+   });
+   renderBookshops();
+   renderBookshopMarkers();
+ });
+}
+function renderBookshopMarkers(){
+ if(!bookshopsLayer)return;
+ bookshopsLayer.clearLayers();
+ const bounds=bookshopsMap.getBounds();
+ bookshopsData.forEach(r=>{
+   const p=bookshopPoint(r),t=r.tags||{};
+   if(!p || !bounds.contains(p))return;
+   const v=getVisit(r);
+   const details=[t.second_hand&&`Occasion : ${t.second_hand}`,t.books&&`Types : ${t.books}`,t.opening_hours&&`Horaires : ${t.opening_hours}`].filter(Boolean);
+   const status=`${visitLabel(v.status)}${v.date?' · '+v.date:''}${v.rating?' · '+'★'.repeat(v.rating):''}`;
+   const note=v.note?`<br><br><em>${esc(v.note)}</em>`:'';
+   const popup=`<strong>${esc(t.name||'Bouquiniste')}</strong><br>${esc(bookshopAddress(t)||'Adresse non renseignée')}<br><small>${esc(bookshopType(t))}</small><br><small>${esc(status)}</small>${details.length?'<br><br>'+details.map(esc).join('<br>'):''}${note}`;
+   L.marker(p).bindPopup(popup).addTo(bookshopsLayer);
+ });
+}
+
+
 function renderBookshops(){
  const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
  const filter=$('#bookshopTypeFilter')?.value||'used';
+ const visitFilter=$('#bookshopVisitFilter')?.value||'all';
  const inMap=bookshopRowsInMap();
  const rows=inMap.filter(r=>{
    if(filter==='used' && !isUsedBookshop(r)) return false;
+   const v=getVisit(r);
+   if(visitFilter!=='all' && v.status!==visitFilter) return false;
    const t=r.tags||{};
    const hay=[t.name,t['addr:street'],t['addr:city'],t.books,t.second_hand].filter(Boolean).join(' ').toLowerCase();
    return !q || hay.includes(q);
@@ -2294,24 +2378,21 @@ function renderBookshops(){
  const status=list.querySelector('.bookshop-search-status');
  const statusHTML=status?status.outerHTML:'';
  list.innerHTML=statusHTML+(rows.length?rows.map(r=>{
-   const t=r.tags||{},p=bookshopPoint(r);
-   return `<div class="bookshop-row" data-lat="${p[0]}" data-lon="${p[1]}">
+   const t=r.tags||{},p=bookshopPoint(r),v=getVisit(r);
+   return `<div class="bookshop-row visit-${visitClass(v.status)}" data-lat="${p[0]}" data-lon="${p[1]}">
      <h3>${esc(t.name||'Bouquiniste sans nom')}</h3>
      <p>${esc(bookshopAddress(t)||'Adresse non renseignée')}</p>
      <span class="bookshop-tag">${esc(bookshopType(t))}</span>
+     <span class="bookshop-visit-badge">${esc(visitLabel(v.status))}${v.rating?' · '+'★'.repeat(v.rating):''}</span>
+     ${visitControls(r)}
    </div>`;
- }).join(''):'<div class="bookshop-empty">Aucun bouquiniste visible dans la zone de carte.</div>');
- [...list.querySelectorAll('.bookshop-row')].forEach(el=>el.onclick=()=>{
+ }).join(''):'<div class="bookshop-empty">Aucun établissement correspondant dans la zone visible.</div>');
+ [...list.querySelectorAll('.bookshop-row')].forEach(el=>el.onclick=e=>{
+   if(e.target.closest('.bookshop-visit'))return;
    bookshopsMap.setView([+el.dataset.lat,+el.dataset.lon],17);
  });
- if(bookshopsLayer)bookshopsLayer.clearLayers();
- rows.forEach(r=>{
-   const p=bookshopPoint(r),t=r.tags||{};
-   if(!p)return;
-   const details=[t.second_hand&&`Occasion : ${t.second_hand}`,t.books&&`Types : ${t.books}`,t.opening_hours&&`Horaires : ${t.opening_hours}`].filter(Boolean);
-   const popup=`<strong>${esc(t.name||'Bouquiniste')}</strong><br>${esc(bookshopAddress(t)||'Adresse non renseignée')}<br><small>${esc(bookshopType(t))}</small>${details.length?'<br><br>'+details.map(esc).join('<br>'):''}`;
-   L.marker(p).bindPopup(popup).addTo(bookshopsLayer);
- });
+ bindVisitControls(list);
+ renderBookshopMarkers();
 }
 
 function dbToMap(r){
@@ -2403,13 +2484,14 @@ async function syncBookshops(){
 
    setBookshopMessage('Recherche des bouquinistes dans OpenStreetMap…');
    const elements=await queryOSM(bbox.south,bbox.west,bbox.north,bbox.east);
-   const records=elements.map(o=>{
+   let records=elements.map(o=>{
      const t=o.tags||{},p=bookshopPoint(o);
      if(!p) return null;
      return {
        osm_type:o.type, osm_id:o.id,
        name:t.name||'Bouquiniste sans nom',
        address:bookshopAddress(t)||null,
+       address_source:bookshopAddress(t)?'osm':null,
        postcode:t['addr:postcode']||null, city:t['addr:city']||t['addr:town']||t['addr:village']||null,
        country:t['addr:country']||null,
        latitude:p[0],longitude:p[1],
@@ -2419,6 +2501,8 @@ async function syncBookshops(){
        osm_updated_at:new Date().toISOString()
      };
    }).filter(Boolean);
+
+   await enrichBookshopAddresses(records);
 
    if(editor && records.length){
      const {error}=await sb.from('bookshops').upsert(records,{onConflict:'osm_type,osm_id'});
@@ -2445,6 +2529,7 @@ function initBookshops(){
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(bookshopsMap);
  bookshopsLayer=L.layerGroup().addTo(bookshopsMap);
  $('#bookshopSearch').oninput=renderBookshops;
+$('#bookshopVisitFilter').onchange=renderBookshops;
 $('#bookshopTypeFilter').onchange=renderBookshops;
 bookshopsMap.on('moveend',renderBookshops);$('#bookshopTypeFilter').onchange=renderBookshops;$('#bookshopRefresh').onclick=syncBookshops;$('#bookshopLocate').onclick=syncBookshops;$('#bookshopCity').onkeydown=e=>{if(e.key==='Enter')syncBookshops();};
  loadBookshops().catch(e=>console.warn(e));
