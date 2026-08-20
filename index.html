@@ -558,6 +558,36 @@ body.editor .chat-window.open{display:flex}
 .bookshop-nav-menu a{text-decoration:none;padding:4px 6px;border-radius:4px}
 .bookshop-nav-menu a:hover{background:#f0f0f0}
 </style>
+
+<script>
+const BOOKSHOP_FAVORITES_KEY='bookshop_favorites_v2';
+function getBookshopFavorites(){
+  try{return new Set(JSON.parse(localStorage.getItem(BOOKSHOP_FAVORITES_KEY)||'[]').map(String));}
+  catch(e){return new Set();}
+}
+function bookshopFavoriteId(r){
+  const d=r?.db||{};
+  const type=r?.osm_type||d.osm_type||r?.type||'node';
+  const id=r?.osm_id||d.osm_id||r?.id||d.id;
+  return id==null ? '' : `${type}:${id}`;
+}
+function isBookshopFavorite(r){
+  const id=bookshopFavoriteId(r);
+  return !!id && getBookshopFavorites().has(id);
+}
+function toggleBookshopFavorite(r){
+  const favorites=getBookshopFavorites();
+  const id=bookshopFavoriteId(r);
+  if(!id) return;
+  if(favorites.has(id)) favorites.delete(id);
+  else favorites.add(id);
+  localStorage.setItem(BOOKSHOP_FAVORITES_KEY,JSON.stringify([...favorites]));
+}
+</script>
+
+<style>
+.bookshop-popup-favorite{display:block;margin-top:7px;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -643,7 +673,7 @@ body.editor .chat-window.open{display:flex}
   <div class="bookshops-toolbar">
     <input id="bookshopSearch" type="search" placeholder="Filtrer les résultats…">
     <input id="bookshopCity" type="search" placeholder="Ville (ex. Paris)">
-    <select id="bookshopTypeFilter" aria-label="Type de commerce"><option value="used" selected>Librairies d’occasion / bouquinistes</option><option value="all">Toutes les librairies OSM</option></select><select id="bookshopVisitFilter" aria-label="État de visite"><option value="all">Toutes les visites</option><option value="todo">À visiter</option><option value="visited">Visités</option><option value="revisit">À revoir</option></select>
+    <select id="bookshopTypeFilter" aria-label="Type de commerce"><option value="used" selected>Librairies d’occasion / bouquinistes</option><option value="all">Toutes les librairies OSM</option></select><select id="bookshopVisitFilter" aria-label="État de visite"><option value="all">Toutes les visites</option><option value="favorite">Favoris</option><option value="todo">À visiter</option><option value="visited">Visités</option><option value="revisit">À revoir</option></select>
     <button id="bookshopLocate" class="secondary">Rechercher dans la carte</button>
     <button id="bookshopRefresh" class="secondary">Actualiser les données OSM</button>
   </div>
@@ -2450,6 +2480,7 @@ function renderBookshopMarkers(){
         <div class="bookshop-popup-address">${esc(address)}</div>
         <div class="bookshop-popup-type">${esc(bookshopType(t))}</div>
         <div class="bookshop-popup-status">${esc(statusText)}</div>
+        <button type="button" class="bookshop-popup-favorite">${isBookshopFavorite(r)?'★ Retirer des favoris':'☆ Ajouter aux favoris'}</button>
         ${details.length?`<div class="bookshop-popup-details">${details.map(esc).join('<br>')}</div>`:''}
         ${note}
         <div class="bookshop-popup-actions">
@@ -2468,6 +2499,12 @@ function renderBookshopMarkers(){
     marker.bindPopup(popup);
     marker.on('popupopen',()=>{
       const popupEl=marker.getPopup()?.getElement();
+      const fav=popupEl?.querySelector('.bookshop-popup-favorite');
+      if(fav) fav.onclick=()=>{
+        toggleBookshopFavorite(r);
+        fav.textContent=isBookshopFavorite(r)?'★ Retirer des favoris':'☆ Ajouter aux favoris';
+        renderBookshops();
+      };
       const btn=popupEl?.querySelector('.bookshop-popup-route');
       const menu=popupEl?.querySelector('.bookshop-nav-menu');
       if(btn && menu){
@@ -2501,11 +2538,16 @@ function renderBookshops(){
  const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
  const filter=$('#bookshopTypeFilter')?.value||'used';
  const visitFilter=$('#bookshopVisitFilter')?.value||'all';
+ const favoriteFilter=visitFilter==='favorite';
  const inMap=bookshopRowsInMap();
  const rows=inMap.filter(r=>{
    if(filter==='used' && !isUsedBookshop(r)) return false;
    const v=getVisit(r);
-   if(visitFilter!=='all' && v.status!==visitFilter) return false;
+   if(favoriteFilter){
+     if(!isBookshopFavorite(r)) return false;
+   }else if(visitFilter!=='all' && v.status!==visitFilter){
+     return false;
+   }
    const t=r.tags||{};
    const hay=[t.name,t['addr:street'],t['addr:city'],t.books,t.second_hand].filter(Boolean).join(' ').toLowerCase();
    return !q || hay.includes(q);
