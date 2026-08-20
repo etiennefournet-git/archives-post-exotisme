@@ -613,6 +613,7 @@ body.editor .chat-window.open{display:flex}
   <div class="bookshops-toolbar">
     <input id="bookshopSearch" type="search" placeholder="Filtrer les résultats…">
     <input id="bookshopCity" type="search" placeholder="Ville (ex. Paris)">
+    <select id="bookshopTypeFilter" aria-label="Type de commerce"><option value="used" selected>Librairies d’occasion / bouquinistes</option><option value="all">Toutes les librairies OSM</option></select>
     <button id="bookshopLocate" class="secondary">Rechercher dans la carte</button>
     <button id="bookshopRefresh" class="secondary">Actualiser les données OSM</button>
   </div>
@@ -2242,6 +2243,7 @@ function renderArchives(){
 
 
 const BOOKSHOP_OVERPASS='https://overpass-api.de/api/interpreter';
+const BOOKSHOP_OVERPASS_FALLBACK='https://overpass.kumi.systems/api/interpreter';
 const BOOKSHOP_NOMINATIM='https://nominatim.openstreetmap.org/search';
 
 function bookshopBounds(){
@@ -2263,24 +2265,45 @@ function bookshopType(t){
  if(t.shop==='second_hand') return 'Seconde main · livres';
  return 'Librairie';
 }
+
+function isUsedBookshop(r){
+ const t=r.tags||{};
+ return t.second_hand==='yes' || t.second_hand==='only' ||
+        t.shop==='second_hand' || (t.books||'').split(';').includes('used');
+}
+
+function bookshopRowsInMap(){
+ const bounds=bookshopsMap.getBounds();
+ return bookshopsData.filter(r=>{
+   const p=bookshopPoint(r);
+   return p && bounds.contains(p);
+ });
+}
 function renderBookshops(){
  const q=($('#bookshopSearch')?.value||'').trim().toLowerCase();
- const rows=bookshopsData.filter(r=>{
+ const filter=$('#bookshopTypeFilter')?.value||'used';
+ const inMap=bookshopRowsInMap();
+ const rows=inMap.filter(r=>{
+   if(filter==='used' && !isUsedBookshop(r)) return false;
    const t=r.tags||{};
    const hay=[t.name,t['addr:street'],t['addr:city'],t.books,t.second_hand].filter(Boolean).join(' ').toLowerCase();
    return !q || hay.includes(q);
  });
  $('#bookshopCount').textContent=rows.length;
  const list=$('#bookshopsResults');
- list.innerHTML=rows.length?rows.map(r=>{
+ const status=list.querySelector('.bookshop-search-status');
+ const statusHTML=status?status.outerHTML:'';
+ list.innerHTML=statusHTML+(rows.length?rows.map(r=>{
    const t=r.tags||{},p=bookshopPoint(r);
    return `<div class="bookshop-row" data-lat="${p[0]}" data-lon="${p[1]}">
      <h3>${esc(t.name||'Bouquiniste sans nom')}</h3>
      <p>${esc(bookshopAddress(t)||'Adresse non renseignée')}</p>
      <span class="bookshop-tag">${esc(bookshopType(t))}</span>
    </div>`;
- }).join(''):'<div class="bookshop-empty">Aucun établissement trouvé.</div>';
- [...list.querySelectorAll('.bookshop-row')].forEach(el=>el.onclick=()=>bookshopsMap.setView([+el.dataset.lat,+el.dataset.lon],17));
+ }).join(''):'<div class="bookshop-empty">Aucun bouquiniste visible dans la zone de carte.</div>');
+ [...list.querySelectorAll('.bookshop-row')].forEach(el=>el.onclick=()=>{
+   bookshopsMap.setView([+el.dataset.lat,+el.dataset.lon],17);
+ });
  if(bookshopsLayer)bookshopsLayer.clearLayers();
  rows.forEach(r=>{
    const p=bookshopPoint(r),t=r.tags||{};
@@ -2312,9 +2335,20 @@ async function loadBookshops(){
  renderBookshops();
 }
 
+
+async function fetchWithTimeout(url, options={}, ms=15000){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),ms);
+ try{
+   return await fetch(url,{...options,signal:controller.signal});
+ }catch(e){
+   if(e.name==='AbortError') throw new Error('Délai dépassé (15 s) — le service distant ne répond pas.');
+   throw e;
+ }finally{clearTimeout(timer);}
+}
 async function geocodeCity(city){
  const url=BOOKSHOP_NOMINATIM+'?format=jsonv2&limit=1&countrycodes=fr&q='+encodeURIComponent(city);
- const r=await fetch(url,{headers:{Accept:'application/json'}});
+ const r=await fetchWithTimeout(url,{headers:{Accept:'application/json'}},10000);
  if(!r.ok) throw new Error(`Géocodage HTTP ${r.status}`);
  const d=await r.json();
  if(!d.length) throw new Error(`Ville introuvable : ${city}`);
@@ -2322,31 +2356,34 @@ async function geocodeCity(city){
  if(bb.length!==4) throw new Error('Emprise géographique invalide');
  return {south:bb[0],north:bb[1],west:bb[2],east:bb[3],lat:+d[0].lat,lon:+d[0].lon};
 }
-
-function setBookshopMessage(msg, error=false){
- $('#bookshopsResults').innerHTML=`<div class="bookshop-empty">${esc(msg)}</div>`;
+function setBookshopMessage(msg,error=false){
+ $('#bookshopsResults').innerHTML=`<div class="bookshop-empty bookshop-search-status">${esc(msg)}</div>`;
  if(error) console.error(msg);
 }
-
 async function queryOSM(south,west,north,east){
  const bbox=`${south},${west},${north},${east}`;
- const q=`[out:json][timeout:60];
+ const q=`[out:json][timeout:30];
 (
-  nwr["shop"="books"](${bbox});
-  nwr["shop"="second_hand"]["books"](${bbox});
+ nwr["shop"="books"]["second_hand"~"^(yes|only)$"](${bbox});
+ nwr["shop"="second_hand"]["books"](${bbox});
 );
 out center tags;`;
- const r=await fetch(BOOKSHOP_OVERPASS,{
-   method:'POST',
-   headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json'},
-   body:q
- });
- const text=await r.text();
- if(!r.ok) throw new Error(`Overpass HTTP ${r.status}: ${text.slice(0,240)}`);
- let data;
- try { data=JSON.parse(text); }
- catch { throw new Error(`Réponse Overpass invalide : ${text.slice(0,240)}`); }
- return data.elements||[];
+ let lastError=null;
+ for(const endpoint of [BOOKSHOP_OVERPASS,BOOKSHOP_OVERPASS_FALLBACK]){
+   try{
+     const r=await fetchWithTimeout(endpoint,{
+       method:'POST',
+       headers:{'Content-Type':'text/plain;charset=UTF-8','Accept':'application/json'},
+       body:q
+     },20000);
+     const text=await r.text();
+     if(!r.ok){lastError=new Error(`Overpass HTTP ${r.status}`);continue;}
+     let data;
+     try{data=JSON.parse(text);}catch{lastError=new Error('Réponse Overpass invalide');continue;}
+     return data.elements||[];
+   }catch(e){lastError=e;}
+ }
+ throw lastError||new Error('Les services OpenStreetMap sont indisponibles.');
 }
 
 async function syncBookshops(){
@@ -2355,6 +2392,7 @@ async function syncBookshops(){
    const city=($('#bookshopCity')?.value||'').trim();
    let bbox;
    if(city){
+     setBookshopMessage(`Recherche de « ${city} »…`);
      const g=await geocodeCity(city);
      bbox=g;
      bookshopsMap.fitBounds([[g.south,g.west],[g.north,g.east]],{padding:[20,20]});
@@ -2363,6 +2401,7 @@ async function syncBookshops(){
      bbox={south:b.getSouth(),west:b.getWest(),north:b.getNorth(),east:b.getEast()};
    }
 
+   setBookshopMessage('Recherche des bouquinistes dans OpenStreetMap…');
    const elements=await queryOSM(bbox.south,bbox.west,bbox.north,bbox.east);
    const records=elements.map(o=>{
      const t=o.tags||{},p=bookshopPoint(o);
@@ -2387,8 +2426,12 @@ async function syncBookshops(){
    }
    await loadBookshops();
    const cityLabel=city?` pour ${city}`:' dans la zone';
-   setBookshopMessage(`${records.length} établissement(s) trouvé(s)${cityLabel}.`);
-   setTimeout(renderBookshops,900);
+   const visibleCount=bookshopRowsInMap().filter(isUsedBookshop).length;
+   $('#bookshopsResults').insertAdjacentHTML('afterbegin',
+     `<div class="bookshop-empty bookshop-search-status" style="border-bottom:1px solid var(--line);">`+
+     `${visibleCount} bouquiniste(s) / librairie(s) d’occasion affiché(s)${cityLabel}.`+
+     `</div>`);
+   renderBookshops();
  }catch(e){
    console.error('Bouquinistes:',e);
    setBookshopMessage(`Erreur : ${e.message}`,true);
@@ -2401,7 +2444,9 @@ function initBookshops(){
  bookshopsMap=L.map('bookshopsMap').setView([48.8566,2.3522],13);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(bookshopsMap);
  bookshopsLayer=L.layerGroup().addTo(bookshopsMap);
- $('#bookshopSearch').oninput=renderBookshops;$('#bookshopRefresh').onclick=syncBookshops;$('#bookshopLocate').onclick=syncBookshops;$('#bookshopCity').onkeydown=e=>{if(e.key==='Enter')syncBookshops();};
+ $('#bookshopSearch').oninput=renderBookshops;
+$('#bookshopTypeFilter').onchange=renderBookshops;
+bookshopsMap.on('moveend',renderBookshops);$('#bookshopTypeFilter').onchange=renderBookshops;$('#bookshopRefresh').onclick=syncBookshops;$('#bookshopLocate').onclick=syncBookshops;$('#bookshopCity').onkeydown=e=>{if(e.key==='Enter')syncBookshops();};
  loadBookshops().catch(e=>console.warn(e));
  setTimeout(()=>bookshopsMap.invalidateSize(),100);
 }
