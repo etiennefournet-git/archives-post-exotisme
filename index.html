@@ -2423,6 +2423,41 @@ function renderBookshops(){
  renderBookshopMarkers();
 }
 
+async function reverseBookshopAddress(lat,lon){
+ const key=`${lat.toFixed(5)},${lon.toFixed(5)}`;
+ if(bookshopAddressCache.has(key)) return bookshopAddressCache.get(key);
+ const url=BOOKSHOP_REVERSE+`?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=18&addressdetails=1`;
+ try{
+   const r=await fetchWithTimeout(url,{headers:{Accept:'application/json'}},10000);
+   if(!r.ok)return '';
+   const d=await r.json();
+   const a=d.address||{};
+   const addr=[a.house_number,a.road||a.pedestrian||a.footway,a.postcode,a.city||a.town||a.village||a.municipality].filter(Boolean).join(', ');
+   bookshopAddressCache.set(key,addr);
+   return addr;
+ }catch(e){
+   console.warn('Géocodage inverse:',e);
+   return '';
+ }
+}
+async function enrichBookshopAddresses(records){
+ const missing=records.filter(r=>!r.address);
+ let done=0;
+ for(const r of missing){
+   const addr=await reverseBookshopAddress(r.latitude,r.longitude);
+   if(addr){
+     r.address=addr;
+     r.osm_tags=r.osm_tags||{};
+   }
+   done++;
+   if(missing.length>1 && done%3===0){
+     setBookshopMessage(`Complétion des adresses : ${done}/${missing.length}…`);
+   }
+   await new Promise(resolve=>setTimeout(resolve,1100));
+ }
+ return records;
+}
+
 function dbToMap(r){
  return {type:r.osm_type||'node',id:r.osm_id||r.id,lat:r.latitude,lon:r.longitude,
    center:{lat:r.latitude,lon:r.longitude},
