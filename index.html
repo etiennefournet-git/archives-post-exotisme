@@ -668,7 +668,7 @@ function refreshIndexCount(){
   <div class="hero">
     <div class="kicker" data-content="home_kicker">Archives · post-exotisme</div>
     <h1 data-content="home_title">Archives du post-exotisme</h1>
-    <p class="lead" data-content="home_lead">Une archive indépendante consacrée au post-exotisme : bibliographie, collection, archives et index des lectures.</p>
+    <p class="lead" data-content="home_lead"><span id="postexDynamicLead">Une archive indépendante consacrée au post-exotisme : bibliographie, collection, archives et index des lectures.</span></p>
     <div class="forum-card editor-private">
       <div class="forum-head">
         <div>
@@ -3057,6 +3057,32 @@ setTimeout(loadForum,300);
 <script>
 window.addEventListener('load',()=>setTimeout(refreshIndexCount,250));
 document.addEventListener('index:updated',refreshIndexCount);
+</script>
+
+<script id="postex-invisible-identities">
+(() => {
+  const firstNames=["Lazare","Viktor","Anton","Arkadi","Gleb","Iakov","Sergueï","Lev","Mikhaïl","Boris","Nikol","Vassili","Roman","Marek","Oleg","Ivan","André","Jérôme","Lucien","Marcel","Émile","Théodore","Armand","Henri","Marius","Nestor","Constantin","Anatole","Silvère","Félix","Romain","Simeon"];
+  const surnames=["Prass","Varn","Koren","Sorn","Kelm","Pral","Voss","Marn","Dalm","Kross","Brask","Drev","Karsk","Tcheren","Vass","Sarn","Orlov","Rém","Dorn","Karn","Velk","Morl","Zaren","Brann","Sov","Tarn","Krev","Mesk","Rask","Voln","Drav","Ners","Krov","Saln","Vesk","Pram"];
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const make=()=>pick(firstNames)+" "+pick(surnames);
+
+  function update(){
+    const lead=document.querySelector('[data-content="home_lead"]');
+    if(!lead)return;
+    // Replace the fixed author pair wherever it occurs in the database-provided text.
+    // If the current lead doesn't contain the pair, leave it untouched.
+    if(/Henri\s+Lallement\s+et\s+Étienne\s+Fournet/i.test(lead.textContent)){
+      lead.textContent=lead.textContent.replace(
+        /Henri\s+Lallement\s+et\s+Étienne\s+Fournet/i,
+        make()+" et "+make()
+      );
+    }
+  }
+
+  // The normal page content may arrive asynchronously from Supabase.
+  // Run after load and a few short retries, without changing any other content.
+  window.addEventListener("load",()=>{update();[100,500,1200,2500].forEach(ms=>setTimeout(update,ms));});
+})();
 </script>
 </body>
 </html>
